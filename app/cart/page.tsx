@@ -95,8 +95,8 @@ export default function CartPage() {
                       }`}
                       title={
                         loadingItems.has(`${item.id}-minus`)
-                          ? "처리중..."
-                          : "수량 감소"
+                          ? "Processing..."
+                          : "Decrease quantity"
                       }
                     >
                       −
@@ -124,8 +124,8 @@ export default function CartPage() {
                       }`}
                       title={
                         loadingItems.has(`${item.id}-plus`)
-                          ? "처리중..."
-                          : "수량 증가"
+                          ? "Processing..."
+                          : "Increase quantity"
                       }
                     >
                       +

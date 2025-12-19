@@ -22,7 +22,7 @@ export default function ProfilePage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // 폼 상태
+  // Form state
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -37,7 +37,7 @@ export default function ProfilePage() {
 
   const [showPasswordForm, setShowPasswordForm] = useState(false);
 
-  // 프로필 데이터 로드
+  // Load profile data
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/auth/login");
@@ -62,7 +62,7 @@ export default function ProfilePage() {
         });
       }
     } catch (err) {
-      setError("프로필을 불러올 수 없습니다");
+      setError("Failed to load profile");
     } finally {
       setIsLoading(false);
     }
@@ -85,12 +85,12 @@ export default function ProfilePage() {
 
       if (response.ok) {
         setUser(data.user);
-        setSuccess("프로필이 업데이트되었습니다");
+        setSuccess("Profile updated successfully");
       } else {
-        setError(data.error || "프로필 업데이트 실패");
+        setError(data.error || "Failed to update profile");
       }
     } catch (err) {
-      setError("프로필 업데이트 중 오류가 발생했습니다");
+      setError("An error occurred while updating profile");
     } finally {
       setIsSaving(false);
     }
@@ -102,12 +102,12 @@ export default function ProfilePage() {
     setSuccess("");
 
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setError("새 비밀번호가 일치하지 않습니다");
+      setError("New passwords do not match");
       return;
     }
 
     if (passwordData.newPassword.length < 6) {
-      setError("새 비밀번호는 최소 6자 이상이어야 합니다");
+      setError("New password must be at least 6 characters");
       return;
     }
 
@@ -126,7 +126,7 @@ export default function ProfilePage() {
       const data = await response.json();
 
       if (response.ok) {
-        setSuccess("비밀번호가 변경되었습니다");
+        setSuccess("Password changed successfully");
         setPasswordData({
           currentPassword: "",
           newPassword: "",
@@ -134,17 +134,17 @@ export default function ProfilePage() {
         });
         setShowPasswordForm(false);
       } else {
-        setError(data.error || "비밀번호 변경 실패");
+        setError(data.error || "Failed to change password");
       }
     } catch (err) {
-      setError("비밀번호 변경 중 오류가 발생했습니다");
+      setError("An error occurred while changing password");
     } finally {
       setIsSaving(false);
     }
   };
 
   if (status === "loading" || isLoading) {
-    return <div className="text-center py-12">로딩 중...</div>;
+    return <div className="text-center py-12">Loading...</div>;
   }
 
   if (status === "unauthenticated") {
@@ -155,8 +155,8 @@ export default function ProfilePage() {
     <div className="max-w-2xl mx-auto px-4 py-8">
       <div className="bg-white rounded-lg shadow-md p-8">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold">프로필</h1>
-          <p className="text-gray-600 mt-2">안녕하세요, {user?.name}님!</p>
+          <h1 className="text-3xl font-bold">Profile</h1>
+          <p className="text-gray-600 mt-2">Hello, {user?.name}!</p>
         </div>
 
         {error && (
@@ -171,13 +171,13 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* 기본 프로필 정보 */}
+        {/* Basic profile information */}
         <div className="mb-8">
-          <h2 className="text-xl font-bold mb-4">기본 정보</h2>
+          <h2 className="text-xl font-bold mb-4">Basic Information</h2>
           <form onSubmit={handleProfileSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                이메일
+                Email
               </label>
               <input
                 type="email"
@@ -186,13 +186,13 @@ export default function ProfilePage() {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
               />
               <p className="text-xs text-gray-500 mt-1">
-                이메일은 변경할 수 없습니다
+                Email cannot be changed
               </p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                이름
+                Name
               </label>
               <input
                 type="text"
@@ -206,7 +206,7 @@ export default function ProfilePage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                전화번호
+                Phone Number
               </label>
               <input
                 type="tel"
@@ -221,7 +221,7 @@ export default function ProfilePage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                주소
+                Address
               </label>
               <textarea
                 value={formData.address}
@@ -229,7 +229,7 @@ export default function ProfilePage() {
                   setFormData({ ...formData, address: e.target.value })
                 }
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-                placeholder="배송받을 주소를 입력해주세요"
+                placeholder="Enter your delivery address"
                 rows={3}
               />
             </div>
@@ -239,21 +239,21 @@ export default function ProfilePage() {
               disabled={isSaving}
               className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold hover:bg-blue-700 transition disabled:bg-gray-400"
             >
-              {isSaving ? "저장 중..." : "저장"}
+              {isSaving ? "Saving..." : "Save"}
             </button>
           </form>
         </div>
 
-        {/* 비밀번호 변경 */}
+        {/* Password change */}
         <div className="border-t pt-8">
-          <h2 className="text-xl font-bold mb-4">보안</h2>
+          <h2 className="text-xl font-bold mb-4">Security</h2>
 
           {!showPasswordForm ? (
             <button
               onClick={() => setShowPasswordForm(true)}
               className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition"
             >
-              비밀번호 변경
+              Change Password
             </button>
           ) : (
             <form
@@ -262,7 +262,7 @@ export default function ProfilePage() {
             >
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  현재 비밀번호
+                  Current Password
                 </label>
                 <input
                   type="password"
@@ -280,7 +280,7 @@ export default function ProfilePage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  새 비밀번호
+                  New Password
                 </label>
                 <input
                   type="password"
@@ -298,7 +298,7 @@ export default function ProfilePage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  새 비밀번호 확인
+                  Confirm New Password
                 </label>
                 <input
                   type="password"
@@ -320,27 +320,27 @@ export default function ProfilePage() {
                   disabled={isSaving}
                   className="flex-1 bg-blue-600 text-white py-2 rounded-lg font-bold hover:bg-blue-700 transition disabled:bg-gray-400"
                 >
-                  {isSaving ? "변경 중..." : "비밀번호 변경"}
+                  {isSaving ? "Changing..." : "Change Password"}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowPasswordForm(false)}
                   className="flex-1 bg-gray-300 text-gray-800 py-2 rounded-lg font-bold hover:bg-gray-400 transition"
                 >
-                  취소
+                  Cancel
                 </button>
               </div>
             </form>
           )}
         </div>
 
-        {/* 네비게이션 */}
+        {/* Navigation */}
         <div className="border-t mt-8 pt-8">
           <Link
             href="/"
             className="text-blue-600 hover:text-blue-700 font-bold"
           >
-            ← 홈으로 돌아가기
+            ← Back to Home
           </Link>
         </div>
       </div>

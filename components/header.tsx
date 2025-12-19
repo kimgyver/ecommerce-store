@@ -15,11 +15,11 @@ export function Header() {
   const cartCount = items.reduce((count, item) => count + item.quantity, 0);
 
   const isActive = (href: string) => {
-    // 새로 클릭된 링크가 있으면 그것만 활성화
+    // If a link was clicked, only activate that one
     if (clickedLink) {
       return clickedLink === href;
     }
-    // 클릭된 링크가 없으면 현재 경로 기준
+    // If no link was clicked, use current path
     return pathname === href;
   };
 

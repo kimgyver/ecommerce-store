@@ -9,7 +9,10 @@ export async function GET(request: Request) {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.email) {
-      return NextResponse.json({ error: "인증이 필요합니다" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
     }
 
     const user = await prisma.user.findUnique({
@@ -25,17 +28,14 @@ export async function GET(request: Request) {
     });
 
     if (!user) {
-      return NextResponse.json(
-        { error: "사용자를 찾을 수 없습니다" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     return NextResponse.json(user);
   } catch (error) {
     console.error("Error fetching user:", error);
     return NextResponse.json(
-      { error: "사용자 정보를 불러올 수 없습니다" },
+      { error: "Failed to fetch user information" },
       { status: 500 }
     );
   }
@@ -46,7 +46,10 @@ export async function PUT(request: Request) {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.email) {
-      return NextResponse.json({ error: "인증이 필요합니다" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
     }
 
     const body = await request.json();
@@ -57,17 +60,14 @@ export async function PUT(request: Request) {
     });
 
     if (!user) {
-      return NextResponse.json(
-        { error: "사용자를 찾을 수 없습니다" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // 비밀번호 변경 시 현재 비밀번호 확인
+    // Check current password when changing password
     if (newPassword) {
       if (!currentPassword) {
         return NextResponse.json(
-          { error: "현재 비밀번호를 입력해주세요" },
+          { error: "Current password is required" },
           { status: 400 }
         );
       }
@@ -78,20 +78,20 @@ export async function PUT(request: Request) {
       );
       if (!isPasswordValid) {
         return NextResponse.json(
-          { error: "현재 비밀번호가 일치하지 않습니다" },
+          { error: "Current password is incorrect" },
           { status: 400 }
         );
       }
 
       if (newPassword.length < 6) {
         return NextResponse.json(
-          { error: "새 비밀번호는 최소 6자 이상이어야 합니다" },
+          { error: "New password must be at least 6 characters" },
           { status: 400 }
         );
       }
     }
 
-    // 사용자 정보 업데이트
+    // Update user information
     const updatedUser = await prisma.user.update({
       where: { email: session.user.email },
       data: {
@@ -110,13 +110,13 @@ export async function PUT(request: Request) {
     });
 
     return NextResponse.json({
-      message: "프로필이 업데이트되었습니다",
+      message: "Profile updated successfully",
       user: updatedUser
     });
   } catch (error) {
     console.error("Error updating user:", error);
     return NextResponse.json(
-      { error: "프로필 업데이트 중 오류가 발생했습니다" },
+      { error: "Failed to update profile" },
       { status: 500 }
     );
   }
