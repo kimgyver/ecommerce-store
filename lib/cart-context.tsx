@@ -131,8 +131,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       });
 
       if (response.ok) {
-        // Verify with server
-        await loadCart();
+        // Success - keep the current order (just verified the quantity was updated)
+        // Don't call loadCart() to preserve the order
       } else {
         const error = await response.json();
         // Revert on error

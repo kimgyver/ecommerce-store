@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { randomBytes } from "crypto";
 
 interface CartItem {
   productId: string;
@@ -66,6 +67,7 @@ export async function POST(request: Request) {
         data: {
           userId,
           totalPrice,
+          paymentIntentId: `direct_${randomBytes(16).toString("hex")}`, // Generate unique ID for direct orders
           items: {
             create: items.map((item: CartItem) => ({
               productId: item.productId,
@@ -89,7 +91,19 @@ export async function POST(request: Request) {
       return newOrder;
     });
 
-    return NextResponse.json(order, { status: 201 });
+    return NextResponse.json(
+      {
+        message: "Order created successfully",
+        order: {
+          id: order.id,
+          totalPrice: order.totalPrice,
+          status: order.status,
+          createdAt: order.createdAt,
+          items: order.items
+        }
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Error creating order:", error);
     return NextResponse.json(

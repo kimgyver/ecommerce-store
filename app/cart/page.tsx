@@ -30,12 +30,14 @@ export default function CartPage() {
 
   const handleCheckout = async () => {
     setIsCheckingOut(true);
-    // Payment processing will be handled here
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    alert("Order completed! Thank you!");
-    clearCart();
-    setIsCheckingOut(false);
-    window.location.href = "/";
+    try {
+      // Redirect to Stripe checkout
+      window.location.href = "/checkout";
+    } catch (error) {
+      console.error("Checkout error:", error);
+      alert("Checkout failed. Please try again.");
+      setIsCheckingOut(false);
+    }
   };
 
   return (

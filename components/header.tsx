@@ -86,6 +86,17 @@ export function Header() {
             <div className="flex items-center gap-4">
               <span className="text-sm">👋 {session.user?.name}</span>
               <Link
+                href="/orders"
+                onClick={() => handleLinkClick("/orders")}
+                className={`px-3 py-1 rounded text-sm transition-all duration-200 ${
+                  isActive("/orders")
+                    ? "bg-blue-600 text-white font-semibold scale-110"
+                    : "bg-gray-600 hover:bg-gray-700 active:scale-95"
+                }`}
+              >
+                Orders
+              </Link>
+              <Link
                 href="/profile"
                 onClick={() => handleLinkClick("/profile")}
                 className={`px-3 py-1 rounded text-sm transition-all duration-200 ${

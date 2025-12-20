@@ -30,14 +30,15 @@ export async function GET(request: Request) {
       );
     }
 
-    // Retrieve user cart
+    // Retrieve user cart sorted by creation time
     let cart = await prisma.cart.findUnique({
       where: { userId: session.user.id },
       include: {
         items: {
           include: {
             product: true
-          }
+          },
+          orderBy: { createdAt: "asc" }
         }
       }
     });

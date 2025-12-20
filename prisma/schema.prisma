@@ -50,6 +50,8 @@ model Order {
   userId        String
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   
+  paymentIntentId String    @unique // Prevent duplicate orders from the same payment
+  
   items         OrderItem[]
   totalPrice    Float
   status        String    @default("pending") // pending, processing, shipped, delivered, cancelled
