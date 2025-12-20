@@ -6,6 +6,8 @@ import { useState, useEffect } from "react";
 import { useCart } from "@/lib/cart-context";
 import { notFound, useParams } from "next/navigation";
 import type { Product } from "@/lib/products";
+import ReviewForm from "@/components/ReviewForm";
+import ReviewsList from "@/components/ReviewsList";
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -15,6 +17,7 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1);
   const [isAdded, setIsAdded] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshReviews, setRefreshReviews] = useState(0);
   const { addToCart } = useCart();
 
   useEffect(() => {
@@ -71,12 +74,15 @@ export default function ProductDetailPage() {
       {/* Product details */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
         {/* Image */}
-        <div className="relative h-96 bg-gray-100 rounded-lg overflow-hidden">
+        <div
+          className="relative bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center p-4"
+          style={{ aspectRatio: "1 / 1" }}
+        >
           <Image
             src={product.image}
             alt={product.name}
             fill
-            className="object-cover"
+            className="object-contain"
           />
         </div>
 
@@ -93,20 +99,51 @@ export default function ProductDetailPage() {
             </p>
           </div>
 
+          {/* Stock status */}
+          <div className="mt-6">
+            {(product.stock ?? 0) === 0 ? (
+              <div className="inline-block px-4 py-2 bg-red-100 text-red-800 rounded-lg font-semibold">
+                Out of Stock
+              </div>
+            ) : (product.stock ?? 0) <= 5 ? (
+              <div className="inline-block px-4 py-2 bg-orange-100 text-orange-800 rounded-lg font-semibold">
+                Low Stock ({product.stock} left)
+              </div>
+            ) : (
+              <div className="inline-block px-4 py-2 bg-green-100 text-green-800 rounded-lg font-semibold">
+                In Stock
+              </div>
+            )}
+          </div>
+
           {/* Quantity selector */}
           <div className="mt-8 flex items-center gap-4">
             <label className="text-gray-700 font-semibold">Quantity:</label>
             <div className="flex items-center border border-gray-300 rounded">
               <button
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                className="px-3 py-2 hover:bg-gray-100"
+                disabled={(product.stock ?? 0) === 0}
+                className={`px-3 py-2 ${
+                  (product.stock ?? 0) === 0
+                    ? "text-gray-400 cursor-not-allowed"
+                    : "hover:bg-gray-100"
+                }`}
               >
                 −
               </button>
               <span className="px-4 py-2">{quantity}</span>
               <button
-                onClick={() => setQuantity(quantity + 1)}
-                className="px-3 py-2 hover:bg-gray-100"
+                onClick={() =>
+                  setQuantity(Math.min(quantity + 1, product.stock ?? 0))
+                }
+                disabled={
+                  (product.stock ?? 0) === 0 || quantity >= (product.stock ?? 0)
+                }
+                className={`px-3 py-2 ${
+                  (product.stock ?? 0) === 0 || quantity >= (product.stock ?? 0)
+                    ? "text-gray-400 cursor-not-allowed"
+                    : "hover:bg-gray-100"
+                }`}
               >
                 +
               </button>
@@ -116,9 +153,11 @@ export default function ProductDetailPage() {
           {/* Add to cart */}
           <button
             onClick={handleAddToCart}
-            disabled={isAdded}
+            disabled={isAdded || (product.stock ?? 0) === 0}
             className={`w-full mt-8 py-3 rounded-lg text-white font-bold text-lg transition ${
-              isAdded
+              (product.stock ?? 0) === 0
+                ? "bg-gray-400 cursor-not-allowed"
+                : isAdded
                 ? "bg-green-600 cursor-default"
                 : "bg-blue-600 hover:bg-blue-700 cursor-pointer"
             }`}
@@ -139,12 +178,15 @@ export default function ProductDetailPage() {
                 href={`/products/${relatedProduct.id}`}
                 className="bg-white rounded-lg shadow hover:shadow-lg transition"
               >
-                <div className="relative w-full h-48 bg-gray-100">
+                <div
+                  className="relative w-full bg-gray-100 flex items-center justify-center p-2"
+                  style={{ aspectRatio: "1 / 1" }}
+                >
                   <Image
                     src={relatedProduct.image}
                     alt={relatedProduct.name}
                     fill
-                    className="object-cover"
+                    className="object-contain"
                   />
                 </div>
                 <div className="p-4">
@@ -156,6 +198,18 @@ export default function ProductDetailPage() {
               </a>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Reviews section */}
+      {product && (
+        <div className="mt-12 border-t pt-8">
+          <h2 className="text-2xl font-bold mb-6">Customer Reviews</h2>
+          <ReviewForm
+            productId={product.id}
+            onReviewCreated={() => setRefreshReviews(refreshReviews + 1)}
+          />
+          <ReviewsList key={refreshReviews} productId={product.id} />
         </div>
       )}
     </div>

@@ -1,36 +1,432 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# E-Commerce Store
 
-## Getting Started
+A modern, full-stack e-commerce platform built with Next.js 16, React 19, and PostgreSQL. Features a complete admin dashboard, payment integration, and comprehensive product management system.
 
-First, run the development server:
+## 🚀 Tech Stack
+
+- **Frontend**: Next.js 16.1.0 with React 19 (App Router)
+- **Backend**: Next.js API Routes
+- **Database**: PostgreSQL with Prisma ORM v6.19.1
+- **Authentication**: NextAuth.js (JWT-based sessions)
+- **Payment**: Stripe integration with idempotent webhook handling
+- **Styling**: Tailwind CSS
+- **Type Safety**: TypeScript with full type coverage
+- **File Storage**: Local filesystem (`/public/uploads/products/`)
+
+## ✨ Completed Features
+
+### Core E-Commerce Features
+
+- ✅ **Product Management** - Browse, search, and filter products by category
+- ✅ **Shopping Cart** - Add/remove items with optimistic updates and real-time stock validation
+- ✅ **User Authentication** - Register, login, and profile management with JWT sessions
+- ✅ **Order Management** - View order history with detailed status tracking
+- ✅ **Payment System** - Stripe integration with idempotent webhook handling (prevents duplicate orders)
+- ✅ **Inventory Management** - Automatic stock depletion on order completion with low stock alerts
+
+### Admin Dashboard
+
+- ✅ **Product CRUD** - Create, read, update, delete products with image uploads
+- ✅ **Order Management** - View and update order statuses in real-time
+- ✅ **Statistics Dashboard** - View sales metrics and analytics
+- ✅ **Responsive Admin Layout** - Collapsible sidebar with proper navigation
+
+### User Experience
+
+- ✅ **Stock Status Display** - Visual indicators for in-stock, low-stock, and out-of-stock items
+- ✅ **Purchase Controls** - Disabled checkout for out-of-stock products with quantity validation
+- ✅ **Product Reviews** - Full review/rating system with 1-5 star ratings
+- ✅ **Related Products** - Automatic category-based product recommendations
+- ✅ **Instant Feedback** - Button loading states, success messages, and error handling
+
+### Localization & Quality
+
+- ✅ **Complete English Localization** - All UI text in English
+- ✅ **Type Safety** - 100% TypeScript with strict type checking
+- ✅ **Responsive Design** - Mobile-friendly interface with Tailwind CSS
+- ✅ **Error Handling** - Comprehensive error handling across all features
+
+## 🗄️ Database Schema
+
+### Core Models
+
+- **User** - Authentication and profile management
+- **Product** - Product catalog with inventory tracking
+- **Order** - Order management with payment intent tracking
+- **OrderItem** - Line items for orders
+- **Cart** - User shopping carts
+- **CartItem** - Items in shopping carts
+- **Review** - Product reviews and ratings
+- **Wishlist** - User wishlist management
+
+## 🔐 Key Implementation Details
+
+### Payment Processing
+
+- **Payment Flow**:
+
+  1. ✅ Customer completes checkout and confirms payment
+  2. ✅ Stripe processes payment and returns confirmation
+  3. ✅ Webhook triggered on payment success
+  4. 📦 Order created with `pending` status
+  5. 📦 Stock automatically decremented for each item
+  6. 📦 Cart cleared after successful order
+  7. (Admin action needed) → `processing` → `shipped` → `delivered`
+
+- Idempotent webhook handling using unique `paymentIntentId` (prevents duplicate orders)
+- Automatic order creation on successful payment
+- Stock depletion in atomic transaction with order creation
+- Cart clearing after successful payment
+
+### Cart Management
+
+- Optimistic updates for better UX
+- Real-time stock validation
+- Quantity enforcement based on available stock
+- Persistent cart storage per user
+
+### Authentication
+
+- JWT-based sessions with NextAuth.js
+- Protected routes for admin and checkout
+- Session persistence across requests
+- Automatic logout on session expiration
+
+### Stock Management
+
+- **Stock Status Display**:
+
+  - `Stock = 0` → **"Out of Stock"** (Red) - Purchase button disabled
+  - `Stock 1-5` → **"Low Stock"** (Orange) - Warning displayed
+  - `Stock 6+` → **"In Stock"** (Green) - Available for purchase
+
+- **Inventory Features**:
+  - Automatic decrement on order completion
+  - Real-time stock validation at checkout
+  - Quantity limits enforced based on available stock
+  - Visual stock indicators on product pages and cards
+  - Purchase controls disabled for out-of-stock items
+  - Real-time inventory updates across all users
+
+## 📋 Review System
+
+- **Submit Reviews** - Authenticated users can rate (1-5 stars) and review products
+- **View Reviews** - Display average rating with star visualization and review list
+- **Manage Reviews** - Users can delete their own reviews
+- **Admin Control** - Future: Review management in admin dashboard
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- PostgreSQL database
+- Stripe account (for payments)
+
+### Installation
+
+1. Clone the repository:
+
+```bash
+git clone <repository-url>
+cd ecommerce-store
+```
+
+2. Install dependencies:
+
+```bash
+npm install
+```
+
+3. Set up environment variables:
+
+```bash
+cp .env.example .env.local
+```
+
+4. Configure `.env.local`:
+
+```env
+DATABASE_URL=postgresql://user:password@localhost:5432/ecommerce
+NEXTAUTH_SECRET=your-secret-key
+NEXTAUTH_URL=http://localhost:3000
+STRIPE_PUBLIC_KEY=pk_test_...
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+```
+
+5. Set up the database:
+
+```bash
+npx prisma migrate dev
+npx prisma db seed
+```
+
+6. Run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+7. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🌐 Application Access
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### End User Access (Customer)
 
-## Learn More
+1. **Browse Products**
 
-To learn more about Next.js, take a look at the following resources:
+   - Visit [http://localhost:3000](http://localhost:3000)
+   - Click "Products" in the navigation
+   - Browse all products or filter by category
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+2. **User Registration**
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+   - Click "Register" in the top navigation
+   - Fill in email and password
+   - Account created and ready to use
 
-## Deploy on Vercel
+3. **User Login**
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+   - Click "Login" in the top navigation
+   - Enter email and password
+   - Redirected to homepage after successful login
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+4. **Shopping**
+
+   - Add products to cart
+   - View cart: Click cart icon in header
+   - Proceed to checkout
+   - Complete payment via Stripe
+
+5. **Order History**
+
+   - After login, click "Orders" in navigation
+   - View all past orders with status
+   - Click order to see details
+
+6. **User Profile**
+
+   - Click "Profile" in navigation
+   - View account information
+   - Change password if needed
+
+7. **Product Reviews**
+   - Go to any product detail page
+   - Scroll to "Customer Reviews" section
+   - Click "Write Review" button (requires login)
+   - Submit rating and review
+
+### Admin Access (Administrator)
+
+1. **Admin Login**
+
+   - Visit [http://localhost:3000/auth/login](http://localhost:3000/auth/login)
+   - Use admin credentials (created during seeding or via NextAuth)
+   - Admin user typically needs to be marked in database
+
+2. **Admin Dashboard**
+
+   - After login, click "Dashboard" in header (appears only for admin)
+   - Or navigate to [http://localhost:3000/dashboard](http://localhost:3000/dashboard)
+
+3. **Product Management**
+
+   - Go to `Dashboard > Products`
+   - **View Products**: See all products with search functionality
+   - **Add Product**: Click "Add Product" button
+     - Fill in name, description, price, stock
+     - Upload product image
+     - Select category
+     - Click "Create Product"
+   - **Edit Product**: Click edit icon next to product
+     - Update any field
+     - Change or update image
+     - Click "Update Product"
+   - **Delete Product**: Click delete icon, confirm deletion
+
+4. **Order Management**
+
+   - Go to `Dashboard > Orders`
+   - **View Orders**: See all orders with customer info
+   - **Filter by Status**: Use status dropdown to filter
+   - **Update Status**: Click status dropdown on order
+     - Options: pending, processing, shipped, delivered, cancelled
+     - Changes update in real-time
+
+5. **Statistics & Analytics**
+   - Go to `Dashboard > Statistics`
+   - View key metrics:
+     - Total Revenue
+     - Total Orders
+     - Total Products
+     - Active Users
+   - View recent orders and top products
+
+### Database Management (Prisma Studio)
+
+**Prisma Studio** provides a web UI to view and manage your database directly.
+
+1. **Open Prisma Studio**
+
+   ```bash
+   npx prisma studio
+   ```
+
+   - Automatically opens [http://localhost:5555](http://localhost:5555) in your browser
+
+2. **View Data**
+
+   - Left sidebar shows all database models
+   - Click any model to view records
+   - See all fields and relationships
+
+3. **Edit Records**
+
+   - Click on any record to edit
+   - Update fields directly in the UI
+   - Click "Save" to persist changes
+
+4. **Create Records**
+
+   - Click "Add record" button
+   - Fill in required fields
+   - Click "Save"
+
+5. **Delete Records**
+
+   - Click on a record
+   - Click "Delete" button
+   - Confirm deletion
+
+6. **Useful Tables**
+   - **User** - Manage user accounts and credentials
+   - **Product** - View/edit products and inventory
+   - **Order** - See all orders with payment details
+   - **Review** - View/manage product reviews
+   - **Cart** - Check active user carts
+
+### Quick Reference URLs
+
+| Page               | URL                                        | Access        |
+| ------------------ | ------------------------------------------ | ------------- |
+| Homepage           | http://localhost:3000                      | Public        |
+| Products           | http://localhost:3000/products             | Public        |
+| Product Detail     | http://localhost:3000/products/[id]        | Public        |
+| Register           | http://localhost:3000/auth/register        | Public        |
+| Login              | http://localhost:3000/auth/login           | Public        |
+| Shopping Cart      | http://localhost:3000/cart                 | Authenticated |
+| Checkout           | http://localhost:3000/checkout             | Authenticated |
+| Order History      | http://localhost:3000/orders               | Authenticated |
+| User Profile       | http://localhost:3000/profile              | Authenticated |
+| Admin Dashboard    | http://localhost:3000/dashboard            | Admin Only    |
+| Product Management | http://localhost:3000/dashboard/products   | Admin Only    |
+| Order Management   | http://localhost:3000/dashboard/orders     | Admin Only    |
+| Statistics         | http://localhost:3000/dashboard/statistics | Admin Only    |
+| Prisma Studio      | http://localhost:5555                      | Development   |
+
+## 📁 Project Structure
+
+```
+├── app/
+│   ├── (admin)/                 # Admin dashboard routes
+│   │   └── dashboard/
+│   ├── (store)/                 # Customer-facing routes
+│   ├── api/                     # API endpoints
+│   ├── auth/                    # Authentication pages
+│   ├── products/                # Product pages
+│   └── layout.tsx
+├── components/                  # Reusable components
+│   ├── admin/                   # Admin components
+│   ├── ReviewForm.tsx           # Review submission form
+│   ├── ReviewsList.tsx          # Review display
+│   └── ...
+├── lib/                         # Utilities and helpers
+│   ├── auth.ts                  # NextAuth config
+│   ├── cart-context.tsx         # Cart state management
+│   ├── prisma.ts                # Prisma client
+│   └── products-server.ts       # Server-side product queries
+├── prisma/
+│   ├── schema.prisma            # Database schema
+│   └── seed.ts                  # Database seeding
+└── public/
+    └── uploads/products/        # Product image storage
+```
+
+## 🔄 API Endpoints
+
+### Products
+
+- `GET /api/products` - List all products
+- `GET /api/products/[id]` - Get product details
+- `POST /api/products` - Create product (admin)
+- `PUT /api/products/[id]` - Update product (admin)
+- `DELETE /api/products/[id]` - Delete product (admin)
+
+### Reviews
+
+- `GET /api/reviews?productId=[id]` - Get product reviews
+- `POST /api/reviews` - Submit review (authenticated)
+- `PUT /api/reviews/[id]` - Update review (owner)
+- `DELETE /api/reviews/[id]` - Delete review (owner)
+
+### Orders
+
+- `GET /api/orders` - Get user orders
+- `GET /api/orders/[id]` - Get order details
+- `POST /api/orders` - Create order
+- `PATCH /api/orders/[id]` - Update order status (admin)
+
+### Cart
+
+- `GET /api/cart` - Get user cart
+- `POST /api/cart` - Add to cart
+- `PUT /api/cart/[productId]` - Update cart item
+- `DELETE /api/cart/[productId]` - Remove from cart
+
+### Payments
+
+- `POST /api/payments` - Create payment intent
+- `POST /api/webhooks/payment-success` - Stripe webhook handler
+
+## 📊 Admin Dashboard Features
+
+### Dashboard
+
+- **Statistics** - Total revenue, orders, products, active users
+- **Recent Orders** - Latest 10 orders with status
+- **Top Products** - Best-selling products
+
+### Product Management
+
+- **List Products** - Search and filter products
+- **Create Product** - Form with image upload
+- **Edit Product** - Update product details and images
+- **Delete Product** - Remove products with confirmation
+
+### Order Management
+
+- **View Orders** - Filter by status (pending, processing, shipped, delivered, cancelled)
+- **Update Status** - Change order status in real-time
+- **Order Details** - View items, customer info, and payment details
+
+## 🎯 Future Enhancements
+
+- [ ] Manual Related Products configuration
+- [ ] Advanced product filtering (price range, ratings)
+- [ ] Coupon/discount system
+- [ ] Email notifications
+- [ ] Analytics dashboard
+- [ ] Multi-language support
+- [ ] Product recommendations AI
+- [ ] Inventory alerts
+- [ ] Product variants (size, color, etc.)
+- [ ] Wishlist management UI
+
+## 📝 License
+
+MIT
+
+## 👨‍💻 Author
+
+Created with Next.js and modern web technologies.

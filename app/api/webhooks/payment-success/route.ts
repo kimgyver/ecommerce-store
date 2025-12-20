@@ -106,6 +106,18 @@ export async function POST(request: NextRequest) {
         }
       });
 
+      // Decrease stock for each product in the order
+      for (const item of cart.items) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: {
+            stock: {
+              decrement: item.quantity
+            }
+          }
+        });
+      }
+
       // Clear cart immediately after order creation
       await tx.cartItem.deleteMany({
         where: { cartId: cart.id }

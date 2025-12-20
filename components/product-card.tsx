@@ -38,12 +38,15 @@ export function ProductCard({ product }: ProductCardProps) {
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition">
       <Link href={`/products/${product.id}`}>
-        <div className="relative w-full h-48 bg-gray-200">
+        <div
+          className="relative w-full bg-gray-200 flex items-center justify-center p-2"
+          style={{ aspectRatio: "1 / 1" }}
+        >
           <Image
             src={product.image}
             alt={product.name}
             fill
-            className="object-cover hover:scale-105 transition"
+            className="object-contain hover:scale-105 transition"
           />
         </div>
       </Link>
@@ -57,20 +60,44 @@ export function ProductCard({ product }: ProductCardProps) {
         <p className="text-gray-600 text-sm mt-2 line-clamp-2">
           {product.description}
         </p>
+
+        {/* Stock status */}
+        <div className="mt-3">
+          {(product.stock ?? 0) === 0 ? (
+            <span className="inline-block px-2 py-1 bg-red-100 text-red-800 text-xs rounded font-semibold">
+              Out of Stock
+            </span>
+          ) : (product.stock ?? 0) <= 5 ? (
+            <span className="inline-block px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded font-semibold">
+              Low Stock
+            </span>
+          ) : (
+            <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs rounded font-semibold">
+              In Stock
+            </span>
+          )}
+        </div>
+
         <div className="flex justify-between items-center mt-4">
           <span className="text-xl font-bold text-blue-600">
             ${product.price.toLocaleString("en-US")}
           </span>
           <button
             onClick={handleAddToCart}
-            disabled={isAdding}
+            disabled={isAdding || (product.stock ?? 0) === 0}
             className={`px-4 py-2 rounded text-white font-semibold transition ${
-              isAdding
+              (product.stock ?? 0) === 0
+                ? "bg-gray-400 cursor-not-allowed"
+                : isAdding
                 ? "bg-green-600 cursor-default"
                 : "bg-blue-600 hover:bg-blue-700 cursor-pointer"
             }`}
           >
-            {isAdding ? "Adding..." : "Add to Cart"}
+            {(product.stock ?? 0) === 0
+              ? "Out of Stock"
+              : isAdding
+              ? "Adding..."
+              : "Add to Cart"}
           </button>
         </div>
         {error && <p className="text-red-600 text-sm mt-2">{error}</p>}
