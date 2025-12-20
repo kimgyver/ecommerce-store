@@ -18,7 +18,7 @@ export default function ProductDetailPage() {
   const [isAdded, setIsAdded] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshReviews, setRefreshReviews] = useState(0);
-  const { addToCart } = useCart();
+  const { addToCart, items: cartItems } = useCart();
 
   useEffect(() => {
     const loadProduct = async () => {
@@ -52,6 +52,11 @@ export default function ProductDetailPage() {
   if (!product) {
     notFound();
   }
+
+  // Calculate available stock considering cart items
+  const cartItemQuantity =
+    cartItems.find(item => item.id === id)?.quantity ?? 0;
+  const availableStock = (product.stock ?? 0) - cartItemQuantity;
 
   const handleAddToCart = async () => {
     try {
@@ -101,18 +106,23 @@ export default function ProductDetailPage() {
 
           {/* Stock status */}
           <div className="mt-6">
-            {(product.stock ?? 0) === 0 ? (
+            {availableStock <= 0 ? (
               <div className="inline-block px-4 py-2 bg-red-100 text-red-800 rounded-lg font-semibold">
                 Out of Stock
               </div>
-            ) : (product.stock ?? 0) <= 5 ? (
+            ) : availableStock <= 5 ? (
               <div className="inline-block px-4 py-2 bg-orange-100 text-orange-800 rounded-lg font-semibold">
-                Low Stock ({product.stock} left)
+                Low Stock ({availableStock} left)
               </div>
             ) : (
               <div className="inline-block px-4 py-2 bg-green-100 text-green-800 rounded-lg font-semibold">
                 In Stock
               </div>
+            )}
+            {cartItemQuantity > 0 && (
+              <p className="text-gray-600 text-sm mt-2">
+                You have {cartItemQuantity} in your cart
+              </p>
             )}
           </div>
 
@@ -122,9 +132,9 @@ export default function ProductDetailPage() {
             <div className="flex items-center border border-gray-300 rounded">
               <button
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                disabled={(product.stock ?? 0) === 0}
+                disabled={availableStock === 0}
                 className={`px-3 py-2 ${
-                  (product.stock ?? 0) === 0
+                  availableStock === 0
                     ? "text-gray-400 cursor-not-allowed"
                     : "hover:bg-gray-100"
                 }`}
@@ -134,13 +144,11 @@ export default function ProductDetailPage() {
               <span className="px-4 py-2">{quantity}</span>
               <button
                 onClick={() =>
-                  setQuantity(Math.min(quantity + 1, product.stock ?? 0))
+                  setQuantity(Math.min(quantity + 1, availableStock))
                 }
-                disabled={
-                  (product.stock ?? 0) === 0 || quantity >= (product.stock ?? 0)
-                }
+                disabled={availableStock === 0 || quantity >= availableStock}
                 className={`px-3 py-2 ${
-                  (product.stock ?? 0) === 0 || quantity >= (product.stock ?? 0)
+                  availableStock === 0 || quantity >= availableStock
                     ? "text-gray-400 cursor-not-allowed"
                     : "hover:bg-gray-100"
                 }`}
@@ -153,9 +161,9 @@ export default function ProductDetailPage() {
           {/* Add to cart */}
           <button
             onClick={handleAddToCart}
-            disabled={isAdded || (product.stock ?? 0) === 0}
+            disabled={isAdded || availableStock <= 0}
             className={`w-full mt-8 py-3 rounded-lg text-white font-bold text-lg transition ${
-              (product.stock ?? 0) === 0
+              availableStock <= 0
                 ? "bg-gray-400 cursor-not-allowed"
                 : isAdded
                 ? "bg-green-600 cursor-default"

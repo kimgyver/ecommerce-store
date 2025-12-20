@@ -3,13 +3,25 @@
 import { useCart } from "@/lib/cart-context";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function CartPage() {
-  const { items, removeFromCart, updateQuantity, clearCart, getTotalPrice } =
-    useCart();
+  const {
+    items,
+    removeFromCart,
+    updateQuantity,
+    clearCart,
+    getTotalPrice,
+    error,
+    clearError
+  } = useCart();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [loadingItems, setLoadingItems] = useState<Set<string>>(new Set());
+
+  // Clear error only on first mount
+  useEffect(() => {
+    clearError();
+  }, []);
 
   if (items.length === 0) {
     return (
@@ -43,6 +55,21 @@ export default function CartPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <h1 className="text-4xl font-bold mb-8">Shopping Cart</h1>
+
+      {/* Error notification */}
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex justify-between items-start">
+          <div>
+            <p className="text-red-700">{error.message}</p>
+          </div>
+          <button
+            onClick={clearError}
+            className="text-red-600 hover:text-red-800 font-semibold ml-4 flex-shrink-0"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Product list */}
@@ -83,6 +110,8 @@ export default function CartPage() {
                           new Set(prev).add(`${item.id}-minus`)
                         );
                         await updateQuantity(item.id, item.quantity - 1);
+                        // Clear error when reducing quantity
+                        clearError();
                         setLoadingItems(prev => {
                           const newSet = new Set(prev);
                           newSet.delete(`${item.id}-minus`);

@@ -64,6 +64,19 @@ export async function PUT(
       });
     }
 
+    // Check if new quantity exceeds available stock
+    // But allow reducing quantity (even if current quantity > stock)
+    if (quantity > cartItem.quantity && quantity > cartItem.product.stock) {
+      return NextResponse.json(
+        {
+          error: `Only ${cartItem.product.stock} items available in stock. You're trying to increase from ${cartItem.quantity} to ${quantity}.`,
+          maxAvailable: cartItem.product.stock,
+          currentQuantity: cartItem.quantity
+        },
+        { status: 400 }
+      );
+    }
+
     // Update quantity
     const updatedItem = await prisma.cartItem.update({
       where: { id: cartItem.id },

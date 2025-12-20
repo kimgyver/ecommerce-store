@@ -39,6 +39,11 @@ export async function POST(request: Request) {
       );
     }
 
+    // Normalize category: capitalize first letter
+    const normalizedCategory = category
+      ? category.charAt(0).toUpperCase() + category.slice(1).toLowerCase()
+      : "General";
+
     // Save image file
     let imagePath = "/uploads/products/placeholder.png";
     if (imageFile) {
@@ -64,7 +69,7 @@ export async function POST(request: Request) {
         description,
         price,
         image: imagePath,
-        category,
+        category: normalizedCategory,
         stock
       }
     });

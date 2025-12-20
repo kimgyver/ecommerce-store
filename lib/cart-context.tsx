@@ -17,6 +17,12 @@ export interface CartItem {
   image: string;
 }
 
+export interface CartError {
+  itemId: string;
+  message: string;
+  maxAvailable?: number;
+}
+
 interface CartContextType {
   items: CartItem[];
   addToCart: (item: CartItem) => Promise<void>;
@@ -25,6 +31,8 @@ interface CartContextType {
   clearCart: () => Promise<void>;
   getTotalPrice: () => number;
   isLoading: boolean;
+  error: CartError | null;
+  clearError: () => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -32,6 +40,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<CartError | null>(null);
   const { data: session } = useSession();
 
   // Load cart when component mounts
@@ -46,6 +55,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const loadCart = async () => {
     try {
       setIsLoading(true);
+      setError(null); // Clear error when loading cart
       const response = await fetch("/api/cart");
       if (response.ok) {
         const data = await response.json();
@@ -134,16 +144,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
         // Success - keep the current order (just verified the quantity was updated)
         // Don't call loadCart() to preserve the order
       } else {
-        const error = await response.json();
-        // Revert on error
+        const errorData = await response.json();
+        // Revert on error and set error state
         await loadCart();
-        throw new Error(error.error || "Failed to update quantity");
+
+        // Set error state for UI to display
+        const errorMsg = errorData.error || "Failed to update quantity";
+        setError({
+          itemId: id,
+          message: errorMsg,
+          maxAvailable: errorData.maxAvailable
+        });
+
+        console.warn(`Stock limit: ${errorMsg}`);
       }
     } catch (error) {
       console.error("Update quantity failed:", error);
-      // Reload cart on error
+      // Reload cart on error (but don't throw - let UI handle gracefully)
       await loadCart();
-      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -171,6 +189,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return items.reduce((total, item) => total + item.price * item.quantity, 0);
   };
 
+  const clearError = () => {
+    setError(null);
+  };
+
   return (
     <CartContext.Provider
       value={{
@@ -180,7 +202,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
         updateQuantity,
         clearCart,
         getTotalPrice,
-        isLoading
+        isLoading,
+        error,
+        clearError
       }}
     >
       {children}
