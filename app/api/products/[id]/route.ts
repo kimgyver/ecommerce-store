@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
+import { writeFile, mkdir, unlink } from "fs/promises";
 import { join } from "path";
 
 const uploadDir = join(process.cwd(), "public", "uploads", "products");
@@ -123,9 +123,34 @@ export async function DELETE(
     const resolvedParams = await Promise.resolve(params);
     const productId = resolvedParams.id;
 
+    // Check if product exists
+    const product = await prisma.product.findUnique({
+      where: { id: productId }
+    });
+
+    if (!product) {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
+
+    // Delete the product image file if it exists and is not a placeholder
+    if (product.image && product.image.startsWith("/uploads/products/")) {
+      try {
+        const imagePath = join(process.cwd(), "public", product.image);
+        await unlink(imagePath);
+        console.log(`Deleted image file: ${imagePath}`);
+      } catch (fileError) {
+        console.error("Error deleting image file:", fileError);
+        // Continue with product deletion even if image deletion fails
+      }
+    }
+
+    // Delete the product
+    // Related data (reviews, cart items, order items, wishlist) will be automatically deleted
+    // due to onDelete: Cascade in the database schema
     await prisma.product.delete({
       where: { id: productId }
     });
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting product:", error);

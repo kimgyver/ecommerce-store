@@ -50,10 +50,17 @@ export default function ProductsPage() {
         method: "DELETE"
       });
 
-      if (response.ok) {
-        setProducts(products.filter(p => p.id !== id));
-        alert("Product deleted successfully");
+      if (!response.ok) {
+        const errorData = await response.json();
+        alert(
+          `Failed to delete product: ${errorData.error || "Unknown error"}`
+        );
+        return;
       }
+
+      setProducts(products.filter(p => p.id !== id));
+      alert("Product deleted successfully");
+      await fetchProducts(); // Refresh the list
     } catch (error) {
       console.error("Failed to delete product:", error);
       alert("Failed to delete product");
