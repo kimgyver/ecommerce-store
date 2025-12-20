@@ -61,6 +61,7 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
 - `[[...slug]]` → 옵션 캐치올 라우트
 
 **중요:** 폴더 이름의 `[...]` 안의 이름이 곧 `params` 객체의 키가 됩니다.
+
 - `[...slug]` → `params.slug`
 - `[...category]` → `params.category`
 - `[...name]` → `params.name`
@@ -1229,6 +1230,137 @@ callbacks: {
 - **Prisma:** https://www.prisma.io/docs
 - **NextAuth.js:** https://next-auth.js.org
 - **Stripe 결제:** https://stripe.com/docs
+
+---
+
+## 16. Next.js Full-Stack vs Separated Architecture
+
+### 16.1 Full-Stack (Next.js Frontend + Backend)
+
+**Structure:**
+
+```
+next.js app
+├── app/pages/        (Frontend)
+├── app/api/          (Backend API Routes)
+└── lib/              (Shared Logic)
+```
+
+**Advantages:**
+
+- Single language (TypeScript) development
+- Fast development speed
+- Type safety (automatic frontend-backend sync)
+- Simple deployment (Vercel single location)
+- Easy code sharing
+
+**Disadvantages:**
+
+- Limited scalability
+- Only Node.js technology possible
+- Concurrent user limit (~1000 users)
+- Security complexity (API key management)
+
+### 16.2 Separated (Frontend + Separate Backend)
+
+**Structure:**
+
+```
+Frontend (Next.js)         Backend (.NET, Java, Node.js)
+├── app/pages/    ────→    ├── /api/products
+├── components/   ────→    ├── /api/auth
+└── lib/fetch     ────→    └── /api/orders
+```
+
+**Advantages:**
+
+- Complete independence
+- Each can be optimized individually
+- Team separation possible
+- Free technology choices
+- Excellent scalability (unlimited concurrent users)
+- Enhanced security
+
+**Disadvantages:**
+
+- Increased development complexity
+- Deployment in 2 locations
+- Network overhead
+- Cumbersome initial setup
+- Increased costs
+
+### 16.3 Comparison Table
+
+| Item                      | Full-Stack  | Separated  |
+| ------------------------- | ----------- | ---------- |
+| **Development Speed**     | ⭐⭐⭐⭐⭐  | ⭐⭐⭐     |
+| **Deployment Complexity** | ⭐⭐        | ⭐⭐⭐⭐   |
+| **Scalability**           | ⭐⭐⭐      | ⭐⭐⭐⭐⭐ |
+| **Team Collaboration**    | ⭐⭐        | ⭐⭐⭐⭐⭐ |
+| **Security**              | ⭐⭐⭐      | ⭐⭐⭐⭐⭐ |
+| **Performance**           | ⭐⭐⭐⭐    | ⭐⭐⭐     |
+| **Cost**                  | Low         | High       |
+| **Type Safety**           | ⭐⭐⭐⭐⭐  | ⭐⭐⭐     |
+| **Concurrent Users**      | ~1000 users | Unlimited  |
+
+### 16.4 Selection by Concurrent Users
+
+```
+Full-Stack (Next.js)
+├── 10 users:      Response time 100ms ✅
+├── 100 users:     Response time 300ms ✅
+├── 500 users:     Response time 1-2s ⚠️
+├── 1000 users:    Response time 5-10s ❌
+└── 5000 users:    Server down 🔥
+
+Separated (Auto-scaling)
+├── 10 users:      Response time 100ms ✅
+├── 100 users:     Response time 100ms ✅
+├── 500 users:     Response time 100ms ✅
+├── 1000 users:    Response time 100ms ✅
+└── 5000 users:    Response time 100ms ✅
+```
+
+### 16.5 Selection Criteria
+
+**Full-Stack Recommended:**
+
+- Small team (1-3 people)
+- MVP/Startup
+- Fast development is priority
+- Users < 10,000
+- Simple business logic
+- Examples: E-commerce, Blog, SaaS
+
+**Separated Recommended:**
+
+- Large team (10+ people)
+- Enterprise scale
+- Complex business logic
+- Users > 100,000
+- High security requirements
+- Examples: Finance, Healthcare, Large platforms
+
+### 16.6 Hybrid Approach (Recommended)
+
+```
+Phase 1: Full-Stack (6 months)
+├── Next.js frontend + API routes
+├── Prisma + PostgreSQL
+└── MVP complete
+
+Phase 2: Partial Separation (1 year)
+├── Frontend: Next.js (maintain)
+├── Backend: Node.js Express (separate)
+├── Separate complex logic only
+└── Stabilize
+
+Phase 3: Microservices (2+ years)
+├── Frontend: Next.js
+├── Backend: .NET, Java, etc. (your choice)
+├── Message Queue: Kafka
+└── Enterprise scale
+```
 
 ---
 
