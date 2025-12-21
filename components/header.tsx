@@ -3,9 +3,24 @@
 import Link from "next/link";
 import { useCart } from "@/lib/cart-context";
 import { useSession, signOut } from "next-auth/react";
+import { Session } from "next-auth";
 import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { Icons } from "./icons";
+
+interface NavLinkProps {
+  href: string;
+  label: string;
+  hasCount?: boolean;
+  cartCount: number;
+  isActive: (href: string) => boolean;
+}
+
+interface UserDropdownProps {
+  session: Session;
+  isActive: (href: string) => boolean;
+  pathname: string;
+}
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -14,11 +29,11 @@ const navLinks = [
 ];
 
 const dropdownLinks = [
-  { href: "/profile", label: "Profile", icon: "user" },
-  { href: "/orders", label: "Orders", icon: "orders" }
+  { href: "/profile", label: "Profile", icon: "user" as const },
+  { href: "/orders", label: "Orders", icon: "orders" as const }
 ];
 
-function NavLink({ href, label, hasCount, cartCount, isActive }: any) {
+function NavLink({ href, label, hasCount, cartCount, isActive }: NavLinkProps) {
   return (
     <Link
       href={href}
@@ -38,7 +53,7 @@ function NavLink({ href, label, hasCount, cartCount, isActive }: any) {
   );
 }
 
-function UserDropdown({ session, isActive, pathname }: any) {
+function UserDropdown({ session, isActive, pathname }: UserDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
