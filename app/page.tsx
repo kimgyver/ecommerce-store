@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ProductCard } from "@/components/product-card";
 import { getProducts } from "@/lib/products-server";
+import { Icons } from "@/components/icons";
 
 export default async function Home() {
   const allProducts = await getProducts();
@@ -11,7 +12,7 @@ export default async function Home() {
       {/* Hero section */}
       <section className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-20">
         <div className="max-w-7xl mx-auto px-4 text-center">
-          <h1 className="text-5xl font-bold mb-4">🛍️ E-Commerce Store</h1>
+          <h1 className="text-5xl font-bold mb-4">E-Commerce Store</h1>
           <p className="text-xl mb-8 opacity-90">
             Find the highest quality electronics at the lowest prices
           </p>
@@ -29,19 +30,21 @@ export default async function Home() {
         <div className="max-w-7xl mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-center">
-              <div className="text-4xl mb-4">🚚</div>
+              <div className="flex justify-center mb-4">{Icons.bookmark}</div>
               <h3 className="text-xl font-bold mb-2">Free Shipping</h3>
               <p className="text-gray-600">Free shipping on orders over $100</p>
             </div>
             <div className="text-center">
-              <div className="text-4xl mb-4">✅</div>
+              <div className="flex justify-center mb-4">
+                {Icons.checkCircle}
+              </div>
               <h3 className="text-xl font-bold mb-2">Quality Guaranteed</h3>
               <p className="text-gray-600">
                 All products are authentic and quality guaranteed
               </p>
             </div>
             <div className="text-center">
-              <div className="text-4xl mb-4">💬</div>
+              <div className="flex justify-center mb-4">{Icons.chatBubble}</div>
               <h3 className="text-xl font-bold mb-2">Customer Support</h3>
               <p className="text-gray-600">24/7 customer service support</p>
             </div>

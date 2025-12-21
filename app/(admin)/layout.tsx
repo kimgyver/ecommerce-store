@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Icons } from "@/components/icons";
 
 export default function AdminLayout({
   children
@@ -64,44 +65,32 @@ export default function AdminLayout({
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             className="p-2 hover:bg-gray-800 rounded transition"
           >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 6h16M4 12h16M4 18h16"
-              />
-            </svg>
+            {Icons.menu}
           </button>
         </div>
 
         <nav className="p-4 space-y-2 flex-1 overflow-auto">
           <NavLink
             href="/dashboard"
-            icon="📊"
+            icon={Icons.dashboard}
             label="Dashboard"
             isOpen={isSidebarOpen}
           />
           <NavLink
             href="/dashboard/products"
-            icon="📦"
+            icon={Icons.products}
             label="Products"
             isOpen={isSidebarOpen}
           />
           <NavLink
             href="/dashboard/orders"
-            icon="🛒"
+            icon={Icons.orders}
             label="Orders"
             isOpen={isSidebarOpen}
           />
           <NavLink
             href="/dashboard/statistics"
-            icon="📈"
+            icon={Icons.statistics}
             label="Statistics"
             isOpen={isSidebarOpen}
           />
@@ -133,7 +122,7 @@ function NavLink({
   isOpen
 }: {
   href: string;
-  icon: string;
+  icon: React.ReactNode;
   label: string;
   isOpen: boolean;
 }) {
@@ -143,7 +132,7 @@ function NavLink({
       className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition text-gray-300 hover:text-white"
       title={!isOpen ? label : undefined}
     >
-      <span className="text-xl">{icon}</span>
+      {icon}
       {isOpen && <span>{label}</span>}
     </Link>
   );

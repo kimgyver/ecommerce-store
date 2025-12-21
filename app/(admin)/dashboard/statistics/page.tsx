@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Icons } from "@/components/icons";
 
 interface StatisticsData {
   totalRevenue: number;
@@ -60,25 +61,25 @@ export default function StatisticsPage() {
         <MetricCard
           title="Total Revenue"
           value={`$${(stats?.totalRevenue ?? 0).toFixed(2)}`}
-          icon="💰"
+          icon={Icons.dollar}
           color="bg-green-500"
         />
         <MetricCard
           title="Total Orders"
           value={stats?.totalOrders ?? 0}
-          icon="📦"
+          icon={Icons.shoppingCart}
           color="bg-blue-500"
         />
         <MetricCard
           title="Total Products"
           value={stats?.totalProducts ?? 0}
-          icon="📦"
+          icon={Icons.listLarge}
           color="bg-purple-500"
         />
         <MetricCard
           title="Avg Order Value"
           value={`$${(stats?.averageOrderValue ?? 0).toFixed(2)}`}
-          icon="📈"
+          icon={Icons.trending}
           color="bg-orange-500"
         />
       </div>
@@ -169,7 +170,7 @@ function MetricCard({
 }: {
   title: string;
   value: string | number;
-  icon: string;
+  icon: React.ReactNode;
   color: string;
 }) {
   return (
@@ -179,7 +180,7 @@ function MetricCard({
           <p className="text-sm opacity-90 font-medium">{title}</p>
           <p className="text-3xl font-bold mt-2">{value}</p>
         </div>
-        <div className="text-4xl opacity-50">{icon}</div>
+        <div className="text-white opacity-50">{icon}</div>
       </div>
     </div>
   );

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Icons } from "@/components/icons";
 
 interface DashboardStats {
   totalProducts: number;
@@ -50,25 +51,25 @@ export default function DashboardPage() {
         <StatCard
           title="Total Products"
           value={stats?.totalProducts ?? 0}
-          icon="📦"
+          icon={Icons.listLarge}
           color="bg-blue-500"
         />
         <StatCard
           title="Total Orders"
           value={stats?.totalOrders ?? 0}
-          icon="🛒"
+          icon={Icons.shoppingCart}
           color="bg-green-500"
         />
         <StatCard
           title="Total Revenue"
           value={`$${(stats?.totalRevenue ?? 0).toFixed(2)}`}
-          icon="💰"
+          icon={Icons.dollar}
           color="bg-purple-500"
         />
         <StatCard
           title="Pending Orders"
           value={stats?.pendingOrders ?? 0}
-          icon="⏳"
+          icon={Icons.clock}
           color="bg-orange-500"
         />
       </div>
@@ -80,22 +81,22 @@ export default function DashboardPage() {
           <ActionButton
             href="/dashboard/products"
             label="Add Product"
-            icon="➕"
+            icon={Icons.plus}
           />
           <ActionButton
             href="/dashboard/products"
             label="Manage Products"
-            icon="📋"
+            icon={Icons.documentDuplicate}
           />
           <ActionButton
             href="/dashboard/orders"
             label="View Orders"
-            icon="📦"
+            icon={Icons.listLarge}
           />
           <ActionButton
             href="/dashboard/statistics"
             label="View Statistics"
-            icon="📊"
+            icon={Icons.trending}
           />
         </div>
       </div>
@@ -111,7 +112,7 @@ function StatCard({
 }: {
   title: string;
   value: string | number;
-  icon: string;
+  icon: React.ReactNode;
   color: string;
 }) {
   return (
@@ -121,7 +122,7 @@ function StatCard({
           <p className="text-sm opacity-90 font-medium">{title}</p>
           <p className="text-3xl font-bold mt-2">{value}</p>
         </div>
-        <div className="text-4xl opacity-50">{icon}</div>
+        <div className="text-white opacity-50">{icon}</div>
       </div>
     </div>
   );
@@ -134,14 +135,14 @@ function ActionButton({
 }: {
   href: string;
   label: string;
-  icon: string;
+  icon: React.ReactNode;
 }) {
   return (
     <Link
       href={href}
-      className="p-4 bg-gray-100 hover:bg-gray-200 rounded-lg transition text-center"
+      className="p-4 bg-gray-100 hover:bg-gray-200 rounded-lg transition text-center flex flex-col items-center"
     >
-      <div className="text-2xl mb-2">{icon}</div>
+      <div className="text-blue-600 mb-2">{icon}</div>
       <p className="font-semibold text-gray-800">{label}</p>
     </Link>
   );
