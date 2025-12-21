@@ -100,7 +100,7 @@ function UserDropdown({ session, isActive, pathname }: UserDropdownProps) {
       </button>
 
       {isOpen && (
-        <div className="absolute -right-16 mt-2 w-48 bg-gray-800 rounded-lg shadow-lg border border-gray-700 z-50">
+        <div className="absolute right-0 top-full mt-2 w-48 bg-gray-800 rounded-lg shadow-lg border border-gray-700 z-50">
           {dropdownLinks.map(link => (
             <Link
               key={link.href}
