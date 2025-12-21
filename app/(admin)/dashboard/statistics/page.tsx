@@ -21,11 +21,34 @@ interface StatisticsData {
   }>;
 }
 
+// 파비콘 변경 함수
+function changeFavicon(emoji: string) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+    <rect width="100" height="100" fill="white"/>
+    <text x="50" y="80" font-size="80" text-anchor="middle" font-family="Arial, sans-serif">${emoji}</text>
+  </svg>`;
+
+  const dataUrl = "data:image/svg+xml," + encodeURIComponent(svg);
+  let favicon = document.querySelector("link[rel='icon']") as HTMLLinkElement;
+  if (!favicon) {
+    favicon = document.createElement("link");
+    favicon.rel = "icon";
+    document.head.appendChild(favicon);
+  }
+  favicon.href = dataUrl;
+}
+
 export default function StatisticsPage() {
   const [stats, setStats] = useState<StatisticsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // 타이틀 변경
+    document.title = "Statistics | Admin";
+
+    // 파비콘 변경
+    changeFavicon("⚙️");
+
     fetchStatistics();
   }, []);
 
