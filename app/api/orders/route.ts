@@ -27,7 +27,6 @@ export async function POST(request: Request) {
   try {
     // Check user authentication
     const session = await getServerSession(authOptions);
-
     if (!session?.user?.id) {
       return NextResponse.json(
         { error: "Authentication required" },
@@ -46,64 +45,68 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create order with transaction
-    const order = await prisma.$transaction(async tx => {
-      // Check and update stock
-      for (const item of items) {
-        const product = await tx.product.findUnique({
-          where: { id: item.productId }
-        });
-
-        if (!product || product.stock < item.quantity) {
-          throw new Error(`Product ${item.productId} out of stock`);
-        }
-
-        // Decrease stock
-        await tx.product.update({
-          where: { id: item.productId },
-          data: { stock: { decrement: item.quantity } }
-        });
-      }
-
-      // Calculate total price
-      const totalPrice = items.reduce(
-        (sum: number, item: CartItem) => sum + item.price * item.quantity,
-        0
-      );
-
-      // Create order
-      const newOrder = await tx.order.create({
-        data: {
-          userId,
-          totalPrice,
-          paymentIntentId,
-          recipientName: shipping.name,
-          recipientPhone: shipping.phone,
-          shippingPostalCode: shipping.postalCode,
-          shippingAddress1: shipping.address1,
-          shippingAddress2: shipping.address2,
-          items: {
-            create: items.map((item: CartItem) => ({
-              productId: item.productId,
-              quantity: item.quantity,
-              price: item.price
-            }))
+    // 1. Check and update stock, create order, clear cart in a single transaction
+    let order;
+    try {
+      order = await prisma.$transaction(async tx => {
+        // Check and update stock
+        for (const item of items) {
+          const product = await tx.product.findUnique({
+            where: { id: item.productId }
+          });
+          if (!product || product.stock < item.quantity) {
+            throw new Error(`Product ${item.productId} out of stock`);
           }
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { stock: { decrement: item.quantity } }
+          });
+        }
+        // Calculate total price
+        const totalPrice = items.reduce(
+          (sum: number, item: CartItem) => sum + item.price * item.quantity,
+          0
+        );
+        // Create order
+        const newOrder = await tx.order.create({
+          data: {
+            userId,
+            totalPrice,
+            paymentIntentId,
+            recipientName: shipping.name,
+            recipientPhone: shipping.phone,
+            shippingPostalCode: shipping.postalCode,
+            shippingAddress1: shipping.address1,
+            shippingAddress2: shipping.address2,
+            items: {
+              create: items.map((item: CartItem) => ({
+                productId: item.productId,
+                quantity: item.quantity,
+                price: item.price
+              }))
+            }
+          },
+          include: { items: true }
+        });
+        // Clear cart after order completion
+        await tx.cartItem.deleteMany({
+          where: {
+            cart: {
+              userId
+            }
+          }
+        });
+        return newOrder;
+      });
+    } catch (err) {
+      // 트랜잭션 내에서 발생한 에러를 명확히 전달
+      return NextResponse.json(
+        {
+          error: err instanceof Error ? err.message : "Order transaction failed"
         },
-        include: { items: true }
-      });
-
-      // Clear cart after order completion
-      await tx.cartItem.deleteMany({
-        where: {
-          cart: {
-            userId
-          }
-        }
-      });
-
-      return newOrder;
-    });
+        { status: 400 }
+      );
+    }
 
     return NextResponse.json(
       {
@@ -155,7 +158,19 @@ export async function GET() {
       orderBy: { createdAt: "desc" }
     });
 
-    return NextResponse.json(orders);
+    // 배송지 정보를 shipping 객체로 매핑해서 반환
+    const ordersWithShipping = orders.map(order => ({
+      ...order,
+      shipping: {
+        name: order.recipientName || "",
+        phone: order.recipientPhone || "",
+        postalCode: order.shippingPostalCode || "",
+        address1: order.shippingAddress1 || "",
+        address2: order.shippingAddress2 || ""
+      }
+    }));
+
+    return NextResponse.json(ordersWithShipping);
   } catch (error) {
     console.error("Error fetching orders:", error);
     return NextResponse.json(

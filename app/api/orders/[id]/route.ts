@@ -59,7 +59,19 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    return NextResponse.json(order);
+    // Add shipping info to response for frontend
+    const orderWithShipping = {
+      ...order,
+      shipping: {
+        name: order.recipientName || "",
+        phone: order.recipientPhone || "",
+        postalCode: order.shippingPostalCode || "",
+        address1: order.shippingAddress1 || "",
+        address2: order.shippingAddress2 || ""
+      }
+    };
+
+    return NextResponse.json(orderWithShipping);
   } catch (error) {
     console.error("Error fetching order:", error);
     return NextResponse.json(

@@ -11,7 +11,23 @@ interface UserProfile {
   name: string;
   phone?: string;
   address?: string;
+  defaultRecipientName?: string;
+  defaultRecipientPhone?: string;
+  defaultShippingPostalCode?: string;
+  defaultShippingAddress1?: string;
+  defaultShippingAddress2?: string;
+  alwaysUseProfileShipping?: boolean;
 }
+
+// Default shipping form state type
+type ShippingForm = {
+  defaultRecipientName: string;
+  defaultRecipientPhone: string;
+  defaultShippingPostalCode: string;
+  defaultShippingAddress1: string;
+  defaultShippingAddress2: string;
+  alwaysUseProfileShipping: boolean;
+};
 
 export default function ProfilePage() {
   const { data: session, status } = useSession();
@@ -28,6 +44,17 @@ export default function ProfilePage() {
     phone: "",
     address: ""
   });
+  // Default shipping form state
+  const [shippingForm, setShippingForm] = useState<ShippingForm>({
+    defaultRecipientName: "",
+    defaultRecipientPhone: "",
+    defaultShippingPostalCode: "",
+    defaultShippingAddress1: "",
+    defaultShippingAddress2: "",
+    alwaysUseProfileShipping: false
+  });
+  const [shippingSaving, setShippingSaving] = useState(false);
+  const [shippingSuccess, setShippingSuccess] = useState("");
 
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
@@ -38,12 +65,12 @@ export default function ProfilePage() {
   const [showPasswordForm, setShowPasswordForm] = useState(false);
 
   // Load profile data
+
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/auth/login");
       return;
     }
-
     if (status === "authenticated") {
       loadProfile();
     }
@@ -60,11 +87,45 @@ export default function ProfilePage() {
           phone: data.phone || "",
           address: data.address || ""
         });
+        setShippingForm({
+          defaultRecipientName: data.defaultRecipientName || "",
+          defaultRecipientPhone: data.defaultRecipientPhone || "",
+          defaultShippingPostalCode: data.defaultShippingPostalCode || "",
+          defaultShippingAddress1: data.defaultShippingAddress1 || "",
+          defaultShippingAddress2: data.defaultShippingAddress2 || "",
+          alwaysUseProfileShipping: !!data.alwaysUseProfileShipping
+        });
       }
     } catch (err) {
       setError("Failed to load profile");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Handle default shipping info update (moved to top-level)
+  const handleShippingSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setShippingSuccess("");
+    setError("");
+    setShippingSaving(true);
+    try {
+      const response = await fetch("/api/user/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(shippingForm)
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setShippingSuccess("Default shipping address updated successfully");
+        setUser(data.user);
+      } else {
+        setError(data.error || "Failed to update shipping info");
+      }
+    } catch (err) {
+      setError("An error occurred while updating shipping info");
+    } finally {
+      setShippingSaving(false);
     }
   };
 
@@ -165,12 +226,6 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {success && (
-          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4">
-            {success}
-          </div>
-        )}
-
         {/* Basic profile information */}
         <div className="mb-8">
           <h2 className="text-xl font-bold mb-4">Basic Information</h2>
@@ -239,8 +294,135 @@ export default function ProfilePage() {
               disabled={isSaving}
               className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold hover:bg-blue-700 transition disabled:bg-gray-400"
             >
-              {isSaving ? "Saving..." : "Save"}
+              {isSaving ? "Saving..." : "Save Basic Info"}
             </button>
+          </form>
+          {success && (
+            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded mt-2">
+              {success}
+            </div>
+          )}
+        </div>
+
+        {/* Default shipping address */}
+        <div className="mb-8">
+          <h2 className="text-xl font-bold mb-4">Default Shipping Address</h2>
+          <form onSubmit={handleShippingSubmit} className="space-y-4">
+            <div className="flex items-center gap-2 mb-2">
+              <input
+                type="checkbox"
+                id="alwaysUseProfileShipping"
+                checked={shippingForm.alwaysUseProfileShipping}
+                onChange={e =>
+                  setShippingForm(f => ({
+                    ...f,
+                    alwaysUseProfileShipping: e.target.checked
+                  }))
+                }
+                className="w-4 h-4 accent-blue-600"
+              />
+              <label
+                htmlFor="alwaysUseProfileShipping"
+                className="text-sm text-gray-700 select-none cursor-pointer"
+              >
+                Always use this shipping address for checkout
+              </label>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Recipient Name
+              </label>
+              <input
+                type="text"
+                value={shippingForm.defaultRecipientName}
+                onChange={e =>
+                  setShippingForm(f => ({
+                    ...f,
+                    defaultRecipientName: e.target.value
+                  }))
+                }
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Recipient Phone
+              </label>
+              <input
+                type="tel"
+                value={shippingForm.defaultRecipientPhone}
+                onChange={e =>
+                  setShippingForm(f => ({
+                    ...f,
+                    defaultRecipientPhone: e.target.value
+                  }))
+                }
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Postal Code
+              </label>
+              <input
+                type="text"
+                value={shippingForm.defaultShippingPostalCode}
+                onChange={e =>
+                  setShippingForm(f => ({
+                    ...f,
+                    defaultShippingPostalCode: e.target.value
+                  }))
+                }
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Address 1
+              </label>
+              <input
+                type="text"
+                value={shippingForm.defaultShippingAddress1}
+                onChange={e =>
+                  setShippingForm(f => ({
+                    ...f,
+                    defaultShippingAddress1: e.target.value
+                  }))
+                }
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Address 2
+              </label>
+              <input
+                type="text"
+                value={shippingForm.defaultShippingAddress2}
+                onChange={e =>
+                  setShippingForm(f => ({
+                    ...f,
+                    defaultShippingAddress2: e.target.value
+                  }))
+                }
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={shippingSaving}
+              className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold hover:bg-blue-700 transition disabled:bg-gray-400"
+            >
+              {shippingSaving ? "Saving..." : "Save Shipping Address"}
+            </button>
+            {shippingSuccess && (
+              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded mt-2">
+                {shippingSuccess}
+              </div>
+            )}
           </form>
         </div>
 

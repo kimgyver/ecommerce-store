@@ -18,6 +18,14 @@ interface OrderItem {
   };
 }
 
+interface ShippingInfo {
+  name: string;
+  phone: string;
+  postalCode: string;
+  address1: string;
+  address2?: string;
+}
+
 interface Order {
   id: string;
   totalPrice: number;
@@ -25,6 +33,7 @@ interface Order {
   createdAt: string;
   updatedAt: string;
   items: OrderItem[];
+  shipping?: ShippingInfo;
 }
 
 export default function OrderDetailPage() {
@@ -166,29 +175,29 @@ export default function OrderDetailPage() {
         <p>{getStatusMessage(order.status)}</p>
       </div>
 
-      {/* Order Info Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white rounded-lg shadow p-4">
-          <p className="text-sm text-gray-600 mb-1">Order Date</p>
-          <p className="font-semibold">{formatDate(order.createdAt)}</p>
+      {/* Order Info Grid - horizontal layout */}
+      <div className="bg-white rounded-lg shadow p-4 mb-8 flex flex-col gap-2 md:flex-row md:gap-6 md:items-center md:justify-between">
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-gray-600 font-medium">Order Date:</span>
+          <span className="font-semibold">{formatDate(order.createdAt)}</span>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <p className="text-sm text-gray-600 mb-1">Last Updated</p>
-          <p className="font-semibold">{formatDate(order.updatedAt)}</p>
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-gray-600 font-medium">Last Updated:</span>
+          <span className="font-semibold">{formatDate(order.updatedAt)}</span>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <p className="text-sm text-gray-600 mb-1">Items</p>
-          <p className="font-semibold text-lg">{order.items.length}</p>
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-gray-600 font-medium">Items:</span>
+          <span className="font-semibold">{order.items.length}</span>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <p className="text-sm text-gray-600 mb-1">Total Amount</p>
-          <p className="font-bold text-lg text-blue-600">
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-gray-600 font-medium">Total Amount:</span>
+          <span className="font-bold text-blue-600 text-lg">
             $
             {order.totalPrice.toLocaleString("en-US", {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2
             })}
-          </p>
+          </span>
         </div>
       </div>
 
@@ -262,6 +271,39 @@ export default function OrderDetailPage() {
             })}
           </p>
         </div>
+      </div>
+
+      {/* Shipping Info - separate card */}
+      <div className="bg-white rounded-lg shadow p-4 mb-8">
+        <p className="text-sm text-gray-600 mb-2 font-bold">Shipping Info</p>
+        {order.shipping ? (
+          <div className="text-sm space-y-1">
+            <div>
+              <span className="font-semibold">Recipient:</span>{" "}
+              {order.shipping.name}
+            </div>
+            <div>
+              <span className="font-semibold">Phone:</span>{" "}
+              {order.shipping.phone}
+            </div>
+            <div>
+              <span className="font-semibold">Postal Code:</span>{" "}
+              {order.shipping.postalCode}
+            </div>
+            <div>
+              <span className="font-semibold">Address 1:</span>{" "}
+              {order.shipping.address1}
+            </div>
+            {order.shipping.address2 && (
+              <div>
+                <span className="font-semibold">Address 2:</span>{" "}
+                {order.shipping.address2}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="text-gray-400">No shipping info</div>
+        )}
       </div>
 
       {/* Action Buttons */}

@@ -21,11 +21,21 @@ model User {
   address       String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  
+
+  // Default shipping address info
+  defaultRecipientName      String?
+  defaultRecipientPhone     String?
+  defaultShippingPostalCode String?
+  defaultShippingAddress1   String?
+  defaultShippingAddress2   String?
+
   cart          Cart?
   orders        Order[]
   wishlist      Wishlist[]
   reviews       Review[]
+
+  // Always use profile shipping address if true
+  alwaysUseProfileShipping Boolean @default(false)
 }
 
 model Product {
@@ -50,7 +60,7 @@ model Order {
   userId        String
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // 배송지 정보
+  // Shipping address info
   recipientName      String?
   recipientPhone     String?
   shippingPostalCode String?

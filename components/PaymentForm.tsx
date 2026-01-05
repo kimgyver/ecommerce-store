@@ -19,6 +19,7 @@ export default function PaymentForm({
   const stripe = useStripe();
   const elements = useElements();
   const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -57,6 +58,7 @@ export default function PaymentForm({
         (paymentIntent.status === "succeeded" ||
           paymentIntent.status === "processing")
       ) {
+        setIsSuccess(true);
         onSuccess();
         return; // 결제 성공 시 아래 에러 처리 방지
       }
@@ -67,7 +69,7 @@ export default function PaymentForm({
       setErrorMessage("An error occurred during payment");
       console.error("[Stripe] Exception during confirmPayment:", err);
     } finally {
-      setIsLoading(false);
+      if (!isSuccess) setIsLoading(false);
     }
   };
 
@@ -83,10 +85,12 @@ export default function PaymentForm({
 
       <button
         type="submit"
-        disabled={!stripe || isLoading}
+        disabled={!stripe || isLoading || isSuccess}
         className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold disabled:bg-gray-400"
       >
-        {isLoading ? "Processing..." : `Pay $${totalAmount.toFixed(2)}`}
+        {isLoading || isSuccess
+          ? "Processing..."
+          : `Pay $${totalAmount.toFixed(2)}`}
       </button>
 
       <p className="text-sm text-gray-600 text-center">

@@ -43,6 +43,7 @@ export default function CheckoutPage() {
     address2: ""
   });
   const [orderError, setOrderError] = useState<string | null>(null);
+  const [saveAsDefault, setSaveAsDefault] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -50,12 +51,12 @@ export default function CheckoutPage() {
       return;
     }
 
-    // 로그인 후: guest_cart가 있으면 서버로 동기화
+    // After login: sync guest_cart to server if exists
     if (status === "authenticated") {
       const guestCart = localStorage.getItem("guest_cart");
       if (guestCart) {
         const items: CartItem[] = JSON.parse(guestCart);
-        // 서버에 각 상품을 추가
+        // Add each product to server
         Promise.all(
           items.map((item: CartItem) =>
             fetch("/api/cart", {
@@ -74,6 +75,62 @@ export default function CheckoutPage() {
       } else {
         loadCartAndCreatePayment();
       }
+
+      // Shipping autofill: if alwaysUseProfileShipping is true, always use profile; otherwise use existing logic
+      (async () => {
+        try {
+          // 1. Check profile alwaysUseProfileShipping value
+          const profileRes = await fetch("/api/user/profile");
+          let profile = null;
+          if (profileRes.ok) {
+            profile = await profileRes.json();
+          }
+          if (profile && profile.alwaysUseProfileShipping) {
+            // Always use profile shipping address
+            setShipping({
+              name: profile.defaultRecipientName || "",
+              phone: profile.defaultRecipientPhone || "",
+              postalCode: profile.defaultShippingPostalCode || "",
+              address1: profile.defaultShippingAddress1 || "",
+              address2: profile.defaultShippingAddress2 || ""
+            });
+            return;
+          }
+          // 2. Existing logic: recent order → if none, use profile
+          let shippingInfo: ShippingInfo | null = null;
+          const orderRes = await fetch("/api/orders?limit=1");
+          if (orderRes.ok) {
+            const orderData = await orderRes.json();
+            if (
+              Array.isArray(orderData) &&
+              orderData.length > 0 &&
+              orderData[0].shipping
+            ) {
+              shippingInfo = orderData[0].shipping;
+            }
+          }
+          if (!shippingInfo && profile) {
+            shippingInfo = {
+              name: profile.defaultRecipientName || "",
+              phone: profile.defaultRecipientPhone || "",
+              postalCode: profile.defaultShippingPostalCode || "",
+              address1: profile.defaultShippingAddress1 || "",
+              address2: profile.defaultShippingAddress2 || ""
+            };
+          }
+          if (
+            shippingInfo &&
+            (shippingInfo.name ||
+              shippingInfo.phone ||
+              shippingInfo.postalCode ||
+              shippingInfo.address1)
+          ) {
+            setShipping(shippingInfo);
+          }
+        } catch (err) {
+          // Ignore: if autofill fails, form remains with empty values
+        }
+      })();
     }
   }, [status]);
 
@@ -238,6 +295,15 @@ export default function CheckoutPage() {
                   setShipping(s => ({ ...s, address2: e.target.value }))
                 }
               />
+              <label className="flex items-center mt-2">
+                <input
+                  type="checkbox"
+                  className="mr-2"
+                  checked={saveAsDefault}
+                  onChange={e => setSaveAsDefault(e.target.checked)}
+                />
+                <span>Use this shipping info as default for next time</span>
+              </label>
             </div>
           </div>
         </div>
@@ -293,6 +359,24 @@ export default function CheckoutPage() {
                       setOrderError(err.error || "Order creation failed");
                       return;
                     }
+                    // On successful order, save as default shipping if 'Use this shipping info as default for next time' is checked
+                    if (saveAsDefault) {
+                      try {
+                        await fetch("/api/user/profile", {
+                          method: "PUT",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            defaultRecipientName: shipping.name,
+                            defaultRecipientPhone: shipping.phone,
+                            defaultShippingPostalCode: shipping.postalCode,
+                            defaultShippingAddress1: shipping.address1,
+                            defaultShippingAddress2: shipping.address2
+                          })
+                        });
+                      } catch (e) {
+                        // Ignore: order continues even if saving shipping address fails
+                      }
+                    }
                     console.log(
                       "[Order API] Order created successfully, navigating to /checkout/success"
                     );
@@ -306,7 +390,7 @@ export default function CheckoutPage() {
                 }}
               />
             </Elements>
-            {/* 에러 메시지 UI: orderError와 errorMessage가 동시에 뜨지 않도록 분리 */}
+            {/* Error message UI: separate orderError and errorMessage to avoid displaying both simultaneously */}
             {orderError && !orderError.includes("Payment") && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mt-4">
                 {orderError}

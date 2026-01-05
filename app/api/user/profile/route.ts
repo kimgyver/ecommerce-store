@@ -23,7 +23,13 @@ export async function GET(request: Request) {
         name: true,
         phone: true,
         address: true,
-        createdAt: true
+        createdAt: true,
+        defaultRecipientName: true,
+        defaultRecipientPhone: true,
+        defaultShippingPostalCode: true,
+        defaultShippingAddress1: true,
+        defaultShippingAddress2: true,
+        alwaysUseProfileShipping: true
       }
     });
 
@@ -53,7 +59,19 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json();
-    const { name, phone, address, currentPassword, newPassword } = body;
+    const {
+      name,
+      phone,
+      address,
+      currentPassword,
+      newPassword,
+      defaultRecipientName,
+      defaultRecipientPhone,
+      defaultShippingPostalCode,
+      defaultShippingAddress1,
+      defaultShippingAddress2,
+      alwaysUseProfileShipping
+    } = body;
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email }
@@ -98,14 +116,28 @@ export async function PUT(request: Request) {
         ...(name && { name }),
         ...(phone && { phone }),
         ...(address && { address }),
-        ...(newPassword && { password: await bcrypt.hash(newPassword, 10) })
+        ...(newPassword && { password: await bcrypt.hash(newPassword, 10) }),
+        ...(defaultRecipientName && { defaultRecipientName }),
+        ...(defaultRecipientPhone && { defaultRecipientPhone }),
+        ...(defaultShippingPostalCode && { defaultShippingPostalCode }),
+        ...(defaultShippingAddress1 && { defaultShippingAddress1 }),
+        ...(defaultShippingAddress2 && { defaultShippingAddress2 }),
+        ...(typeof alwaysUseProfileShipping === "boolean" && {
+          alwaysUseProfileShipping
+        })
       },
       select: {
         id: true,
         email: true,
         name: true,
         phone: true,
-        address: true
+        address: true,
+        defaultRecipientName: true,
+        defaultRecipientPhone: true,
+        defaultShippingPostalCode: true,
+        defaultShippingAddress1: true,
+        defaultShippingAddress2: true,
+        alwaysUseProfileShipping: true
       }
     });
 

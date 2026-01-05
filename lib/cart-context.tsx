@@ -43,14 +43,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<CartError | null>(null);
   const { data: session } = useSession();
 
-  // Load cart when component mounts
-
-  // Load cart from server or localStorage on mount or session change
+  // Load cart from server (member) or from localStorage (guest) on mount or session change
   useEffect(() => {
     if (session?.user?.id) {
       loadCart();
     } else {
-      // 비회원: 로컬 스토리지에서 장바구니 불러오기
+      // Guest: Load cart from localStorage
       const localCart = localStorage.getItem("guest_cart");
       if (localCart) {
         setItems(JSON.parse(localCart));
@@ -80,7 +78,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const addToCart = async (newItem: CartItem) => {
     setIsLoading(true);
     if (!session?.user?.id) {
-      // 비회원: 로컬 스토리지에 저장
+      // Guest: Save to localStorage
       setItems(prev => {
         const exists = prev.find(item => item.id === newItem.id);
         let updated;
@@ -99,7 +97,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
       return;
     }
-    // 회원: 기존 서버 방식
+    // Member: Use server API
     try {
       const response = await fetch("/api/cart", {
         method: "POST",
@@ -126,7 +124,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const removeFromCart = async (id: string) => {
     setIsLoading(true);
     if (!session?.user?.id) {
-      // 비회원: 로컬 스토리지에서 삭제
+      // Guest: Remove from localStorage
       setItems(prev => {
         const updated = prev.filter(item => item.id !== id);
         localStorage.setItem("guest_cart", JSON.stringify(updated));
@@ -135,7 +133,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
       return;
     }
-    // 회원: 기존 서버 방식
+    // Member: Use server API
     try {
       const response = await fetch(`/api/cart/${id}`, {
         method: "DELETE"
@@ -157,7 +155,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const updateQuantity = async (id: string, quantity: number) => {
     setIsLoading(true);
     if (!session?.user?.id) {
-      // 비회원: 로컬 스토리지에서 수량 변경
+      // Guest: Update quantity in localStorage
       setItems(prev => {
         let updated;
         if (quantity <= 0) {
@@ -173,7 +171,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
       return;
     }
-    // 회원: 기존 서버 방식
+    // Member: Use server API
     try {
       // Optimistic update - update UI immediately
       if (quantity <= 0) {
@@ -220,13 +218,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const clearCart = async () => {
     setIsLoading(true);
     if (!session?.user?.id) {
-      // 비회원: 로컬 스토리지에서 전체 삭제
+      // Guest: Remove all items from localStorage
       localStorage.removeItem("guest_cart");
       setItems([]);
       setIsLoading(false);
       return;
     }
-    // 회원: 기존 서버 방식
+    // Member: Use server API
     try {
       // Delete all items
       for (const item of items) {

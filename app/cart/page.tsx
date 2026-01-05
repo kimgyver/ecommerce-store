@@ -33,7 +33,7 @@ export default function CartPage() {
     clearError();
   }, []);
 
-  // 로그인 상태에서 guest_cart 동기화
+  // Sync guest_cart when logged in
   useEffect(() => {
     if (status === "authenticated") {
       const guestCart = localStorage.getItem("guest_cart");
