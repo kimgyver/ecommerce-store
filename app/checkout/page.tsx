@@ -29,12 +29,34 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.push("/auth/login");
+      router.push(`/auth/login?callbackUrl=/checkout`);
       return;
     }
 
+    // 로그인 후: guest_cart가 있으면 서버로 동기화
     if (status === "authenticated") {
-      loadCartAndCreatePayment();
+      const guestCart = localStorage.getItem("guest_cart");
+      if (guestCart) {
+        const items: CartItem[] = JSON.parse(guestCart);
+        // 서버에 각 상품을 추가
+        Promise.all(
+          items.map((item: CartItem) =>
+            fetch("/api/cart", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                productId: item.id,
+                quantity: item.quantity
+              })
+            })
+          )
+        ).then(() => {
+          localStorage.removeItem("guest_cart");
+          loadCartAndCreatePayment();
+        });
+      } else {
+        loadCartAndCreatePayment();
+      }
     }
   }, [status]);
 

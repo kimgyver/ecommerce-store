@@ -4,8 +4,18 @@ import { useCart } from "@/lib/cart-context";
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+
+interface CartItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  image: string;
+}
 
 export default function CartPage() {
+  const { status } = useSession();
   const {
     items,
     removeFromCart,
@@ -22,6 +32,30 @@ export default function CartPage() {
   useEffect(() => {
     clearError();
   }, []);
+
+  // 로그인 상태에서 guest_cart 동기화
+  useEffect(() => {
+    if (status === "authenticated") {
+      const guestCart = localStorage.getItem("guest_cart");
+      if (guestCart) {
+        const items: CartItem[] = JSON.parse(guestCart);
+        Promise.all(
+          items.map((item: CartItem) =>
+            fetch("/api/cart", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                productId: item.id,
+                quantity: item.quantity
+              })
+            })
+          )
+        ).then(() => {
+          localStorage.removeItem("guest_cart");
+        });
+      }
+    }
+  }, [status]);
 
   if (items.length === 0) {
     return (

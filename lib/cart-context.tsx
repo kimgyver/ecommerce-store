@@ -44,15 +44,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const { data: session } = useSession();
 
   // Load cart when component mounts
+
+  // Load cart from server or localStorage on mount or session change
   useEffect(() => {
     if (session?.user?.id) {
       loadCart();
     } else {
-      setItems([]);
+      // 비회원: 로컬 스토리지에서 장바구니 불러오기
+      const localCart = localStorage.getItem("guest_cart");
+      if (localCart) {
+        setItems(JSON.parse(localCart));
+      } else {
+        setItems([]);
+      }
     }
   }, [session]);
 
   const loadCart = async () => {
+    if (!session?.user?.id) return;
     try {
       setIsLoading(true);
       setError(null); // Clear error when loading cart
@@ -69,8 +78,29 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   const addToCart = async (newItem: CartItem) => {
+    setIsLoading(true);
+    if (!session?.user?.id) {
+      // 비회원: 로컬 스토리지에 저장
+      setItems(prev => {
+        const exists = prev.find(item => item.id === newItem.id);
+        let updated;
+        if (exists) {
+          updated = prev.map(item =>
+            item.id === newItem.id
+              ? { ...item, quantity: item.quantity + newItem.quantity }
+              : item
+          );
+        } else {
+          updated = [...prev, newItem];
+        }
+        localStorage.setItem("guest_cart", JSON.stringify(updated));
+        return updated;
+      });
+      setIsLoading(false);
+      return;
+    }
+    // 회원: 기존 서버 방식
     try {
-      setIsLoading(true);
       const response = await fetch("/api/cart", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -79,9 +109,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           quantity: newItem.quantity
         })
       });
-
       if (response.ok) {
-        // Reload cart from server
         await loadCart();
       } else {
         const error = await response.json();
@@ -96,12 +124,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   const removeFromCart = async (id: string) => {
+    setIsLoading(true);
+    if (!session?.user?.id) {
+      // 비회원: 로컬 스토리지에서 삭제
+      setItems(prev => {
+        const updated = prev.filter(item => item.id !== id);
+        localStorage.setItem("guest_cart", JSON.stringify(updated));
+        return updated;
+      });
+      setIsLoading(false);
+      return;
+    }
+    // 회원: 기존 서버 방식
     try {
-      setIsLoading(true);
       const response = await fetch(`/api/cart/${id}`, {
         method: "DELETE"
       });
-
       if (response.ok) {
         await loadCart();
       } else {
@@ -117,6 +155,25 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   const updateQuantity = async (id: string, quantity: number) => {
+    setIsLoading(true);
+    if (!session?.user?.id) {
+      // 비회원: 로컬 스토리지에서 수량 변경
+      setItems(prev => {
+        let updated;
+        if (quantity <= 0) {
+          updated = prev.filter(item => item.id !== id);
+        } else {
+          updated = prev.map(item =>
+            item.id === id ? { ...item, quantity } : item
+          );
+        }
+        localStorage.setItem("guest_cart", JSON.stringify(updated));
+        return updated;
+      });
+      setIsLoading(false);
+      return;
+    }
+    // 회원: 기존 서버 방식
     try {
       // Optimistic update - update UI immediately
       if (quantity <= 0) {
@@ -126,20 +183,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
           items.map(item => (item.id === id ? { ...item, quantity } : item))
         );
       }
-
-      setIsLoading(true);
-
       if (quantity <= 0) {
         await removeFromCart(id);
         return;
       }
-
       const response = await fetch(`/api/cart/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ quantity })
       });
-
       if (response.ok) {
         // Success - keep the current order (just verified the quantity was updated)
         // Don't call loadCart() to preserve the order
@@ -147,7 +199,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
         const errorData = await response.json();
         // Revert on error and set error state
         await loadCart();
-
         // Set error state for UI to display
         const errorMsg = errorData.error || "Failed to update quantity";
         setError({
@@ -155,7 +206,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
           message: errorMsg,
           maxAvailable: errorData.maxAvailable
         });
-
         console.warn(`Stock limit: ${errorMsg}`);
       }
     } catch (error) {
@@ -168,8 +218,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   const clearCart = async () => {
+    setIsLoading(true);
+    if (!session?.user?.id) {
+      // 비회원: 로컬 스토리지에서 전체 삭제
+      localStorage.removeItem("guest_cart");
+      setItems([]);
+      setIsLoading(false);
+      return;
+    }
+    // 회원: 기존 서버 방식
     try {
-      setIsLoading(true);
       // Delete all items
       for (const item of items) {
         await fetch(`/api/cart/${item.id}`, {

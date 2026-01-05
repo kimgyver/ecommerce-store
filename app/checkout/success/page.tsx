@@ -60,6 +60,8 @@ export default function CheckoutSuccessPage() {
           // Clear cart context after successful order
           try {
             await clearCart();
+            // 비회원 장바구니도 비움
+            localStorage.removeItem("guest_cart");
           } catch (error) {
             console.error("Failed to clear cart context:", error);
             // Don't fail the checkout even if cart clear fails
