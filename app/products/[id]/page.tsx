@@ -16,6 +16,7 @@ export default function ProductDetailPage() {
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [quantity, setQuantity] = useState(1);
   const [isAdded, setIsAdded] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshReviews, setRefreshReviews] = useState(0);
   const { addToCart, items: cartItems } = useCart();
@@ -59,6 +60,7 @@ export default function ProductDetailPage() {
   const availableStock = (product.stock ?? 0) - cartItemQuantity;
 
   const handleAddToCart = async () => {
+    setIsAdding(true);
     try {
       await addToCart({
         id: product.id,
@@ -71,6 +73,8 @@ export default function ProductDetailPage() {
       setTimeout(() => setIsAdded(false), 2000);
     } catch (error) {
       console.error("Failed to add to cart:", error);
+    } finally {
+      setIsAdding(false);
     }
   };
 
@@ -161,16 +165,24 @@ export default function ProductDetailPage() {
           {/* Add to cart */}
           <button
             onClick={handleAddToCart}
-            disabled={isAdded || availableStock <= 0}
+            disabled={isAdded || isAdding || availableStock <= 0}
             className={`w-full mt-8 py-3 rounded-lg text-white font-bold text-lg transition ${
               availableStock <= 0
                 ? "bg-gray-400 cursor-not-allowed"
                 : isAdded
                 ? "bg-green-600 cursor-default"
+                : isAdding
+                ? "bg-blue-400 cursor-wait"
                 : "bg-blue-600 hover:bg-blue-700 cursor-pointer"
             }`}
           >
-            {isAdded ? "✓ Added to cart!" : "🛒 Add to Cart"}
+            {availableStock <= 0
+              ? "Out of Stock"
+              : isAdded
+              ? "✓ Added to cart!"
+              : isAdding
+              ? "Adding..."
+              : "🛒 Add to Cart"}
           </button>
         </div>
       </div>
