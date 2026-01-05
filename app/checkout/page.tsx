@@ -7,6 +7,14 @@ import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import PaymentForm from "@/components/PaymentForm";
 
+interface ShippingInfo {
+  name: string;
+  phone: string;
+  postalCode: string;
+  address1: string;
+  address2: string;
+}
+
 interface CartItem {
   id: string;
   name: string;
@@ -26,6 +34,15 @@ export default function CheckoutPage() {
   const [totalAmount, setTotalAmount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [clientSecret, setClientSecret] = useState("");
+  const [paymentIntentId, setPaymentIntentId] = useState("");
+  const [shipping, setShipping] = useState<ShippingInfo>({
+    name: "",
+    phone: "",
+    postalCode: "",
+    address1: "",
+    address2: ""
+  });
+  const [orderError, setOrderError] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -100,11 +117,12 @@ export default function CheckoutPage() {
 
       const paymentData = await paymentRes.json();
 
-      if (!paymentData.clientSecret) {
-        throw new Error("No client secret received");
+      if (!paymentData.clientSecret || !paymentData.paymentIntentId) {
+        throw new Error("No client secret or paymentIntentId received");
       }
 
       setClientSecret(paymentData.clientSecret);
+      setPaymentIntentId(paymentData.paymentIntentId);
     } catch (error) {
       console.error("Error loading checkout:", error);
       alert(
@@ -171,6 +189,57 @@ export default function CheckoutPage() {
               </div>
             </div>
           </div>
+
+          {/* Shipping Info Form */}
+          <div className="bg-white rounded-lg shadow p-6 mt-6">
+            <h3 className="text-lg font-semibold mb-4">Shipping Information</h3>
+            <div className="space-y-3">
+              <input
+                className="w-full border rounded px-3 py-2"
+                placeholder="Name"
+                value={shipping.name}
+                onChange={e =>
+                  setShipping(s => ({ ...s, name: e.target.value }))
+                }
+                required
+              />
+              <input
+                className="w-full border rounded px-3 py-2"
+                placeholder="Phone"
+                value={shipping.phone}
+                onChange={e =>
+                  setShipping(s => ({ ...s, phone: e.target.value }))
+                }
+                required
+              />
+              <input
+                className="w-full border rounded px-3 py-2"
+                placeholder="Postal Code"
+                value={shipping.postalCode}
+                onChange={e =>
+                  setShipping(s => ({ ...s, postalCode: e.target.value }))
+                }
+                required
+              />
+              <input
+                className="w-full border rounded px-3 py-2"
+                placeholder="Address 1"
+                value={shipping.address1}
+                onChange={e =>
+                  setShipping(s => ({ ...s, address1: e.target.value }))
+                }
+                required
+              />
+              <input
+                className="w-full border rounded px-3 py-2"
+                placeholder="Address 2 (optional)"
+                value={shipping.address2}
+                onChange={e =>
+                  setShipping(s => ({ ...s, address2: e.target.value }))
+                }
+              />
+            </div>
+          </div>
         </div>
 
         {/* Payment Form */}
@@ -188,11 +257,61 @@ export default function CheckoutPage() {
             >
               <PaymentForm
                 totalAmount={totalAmount}
-                onSuccess={() => {
-                  router.push("/checkout/success");
+                onSuccess={async () => {
+                  setOrderError(null);
+                  // Validate shipping info
+                  if (
+                    !shipping.name ||
+                    !shipping.phone ||
+                    !shipping.postalCode ||
+                    !shipping.address1
+                  ) {
+                    setOrderError(
+                      "Please fill in all required shipping fields."
+                    );
+                    return;
+                  }
+                  console.log("[Order API] Creating order...");
+                  try {
+                    const res = await fetch("/api/orders", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        items: cartItems.map(item => ({
+                          productId: item.id,
+                          quantity: item.quantity,
+                          price: item.price
+                        })),
+                        shipping,
+                        paymentIntentId
+                      })
+                    });
+                    console.log("[Order API] Response status:", res.status);
+                    if (!res.ok) {
+                      const err = await res.json();
+                      console.error("[Order API Error]", err);
+                      setOrderError(err.error || "Order creation failed");
+                      return;
+                    }
+                    console.log(
+                      "[Order API] Order created successfully, navigating to /checkout/success"
+                    );
+                    router.push(
+                      `/checkout/success?payment_intent=${paymentIntentId}`
+                    );
+                  } catch (err) {
+                    console.error("[Order API Exception]", err);
+                    setOrderError("Order creation failed");
+                  }
                 }}
               />
             </Elements>
+            {/* 에러 메시지 UI: orderError와 errorMessage가 동시에 뜨지 않도록 분리 */}
+            {orderError && !orderError.includes("Payment") && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mt-4">
+                {orderError}
+              </div>
+            )}
           </div>
         </div>
       </div>

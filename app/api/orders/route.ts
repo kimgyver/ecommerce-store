@@ -2,7 +2,6 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { randomBytes } from "crypto";
 
 interface CartItem {
   productId: string;
@@ -10,8 +9,18 @@ interface CartItem {
   price: number;
 }
 
+interface ShippingInfo {
+  name: string;
+  phone: string;
+  postalCode: string;
+  address1: string;
+  address2: string;
+}
+
 interface OrderRequest {
   items: CartItem[];
+  shipping: ShippingInfo;
+  paymentIntentId: string;
 }
 
 export async function POST(request: Request) {
@@ -27,10 +36,10 @@ export async function POST(request: Request) {
     }
 
     const body = (await request.json()) as OrderRequest;
-    const { items } = body;
-    const userId = session.user.id; // Set userId on server (ignore client input)
+    const { items, shipping, paymentIntentId } = body;
+    const userId = session.user.id;
 
-    if (!items || items.length === 0) {
+    if (!items || items.length === 0 || !shipping || !paymentIntentId) {
       return NextResponse.json(
         { error: "Invalid request data" },
         { status: 400 }
@@ -67,7 +76,12 @@ export async function POST(request: Request) {
         data: {
           userId,
           totalPrice,
-          paymentIntentId: `direct_${randomBytes(16).toString("hex")}`, // Generate unique ID for direct orders
+          paymentIntentId,
+          recipientName: shipping.name,
+          recipientPhone: shipping.phone,
+          shippingPostalCode: shipping.postalCode,
+          shippingAddress1: shipping.address1,
+          shippingAddress2: shipping.address2,
           items: {
             create: items.map((item: CartItem) => ({
               productId: item.productId,
@@ -115,7 +129,7 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     // Check user authentication
     const session = await getServerSession(authOptions);

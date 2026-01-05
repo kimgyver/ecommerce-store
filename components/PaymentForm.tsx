@@ -32,19 +32,40 @@ export default function PaymentForm({
     setErrorMessage(null);
 
     try {
-      const { error } = await stripe.confirmPayment({
+      const { error, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: {
-          return_url: `${window.location.origin}/checkout/success`
-        }
+          // No redirect, handle result in place
+        },
+        redirect: "if_required"
       });
+
+      console.log("[Stripe] confirmPayment result:", { error, paymentIntent });
+      if (paymentIntent) {
+        console.log("[Stripe] paymentIntent.status:", paymentIntent.status);
+      }
 
       if (error) {
         setErrorMessage(error.message || "Payment failed");
+        setIsLoading(false);
+        return;
       }
+
+      // 결제 성공 상태 확인
+      if (
+        paymentIntent &&
+        (paymentIntent.status === "succeeded" ||
+          paymentIntent.status === "processing")
+      ) {
+        onSuccess();
+        return; // 결제 성공 시 아래 에러 처리 방지
+      }
+      setErrorMessage(
+        `Payment not completed. Status: ${paymentIntent?.status || "unknown"}`
+      );
     } catch (err) {
       setErrorMessage("An error occurred during payment");
-      console.error(err);
+      console.error("[Stripe] Exception during confirmPayment:", err);
     } finally {
       setIsLoading(false);
     }

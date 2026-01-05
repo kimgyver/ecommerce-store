@@ -49,13 +49,20 @@ model Order {
   id            String    @id @default(cuid())
   userId        String
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
+  // 배송지 정보
+  recipientName      String?
+  recipientPhone     String?
+  shippingPostalCode String?
+  shippingAddress1   String?
+  shippingAddress2   String?
+
   paymentIntentId String    @unique // Prevent duplicate orders from the same payment
-  
+
   items         OrderItem[]
   totalPrice    Float
   status        String    @default("pending") // pending, processing, shipped, delivered, cancelled
-  
+
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   
