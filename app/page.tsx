@@ -1,11 +1,33 @@
+"use client";
+
 import Link from "next/link";
 import { ProductCard } from "@/components/product-card";
-import { getProducts } from "@/lib/products-server";
 import { Icons } from "@/components/icons";
+import { useEffect, useState } from "react";
+import type { Product } from "@/lib/products";
 
-export default async function Home() {
-  const allProducts = await getProducts();
-  const featuredProducts = allProducts.slice(0, 3);
+export default function Home() {
+  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const response = await fetch("/api/products");
+        if (response.ok) {
+          const products = await response.json();
+          // Get first 3 products as featured
+          setFeaturedProducts(products.slice(0, 3));
+        }
+      } catch (error) {
+        console.error("Failed to load products:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadProducts();
+  }, []);
 
   return (
     <div>
@@ -55,19 +77,25 @@ export default async function Home() {
       {/* Featured products section */}
       <section className="max-w-7xl mx-auto px-4 py-16">
         <h2 className="text-3xl font-bold mb-8">Featured Products</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {featuredProducts.map(product => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
-        <div className="text-center">
-          <Link
-            href="/products"
-            className="inline-block px-8 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition"
-          >
-            View All Products
-          </Link>
-        </div>
+        {isLoading ? (
+          <div className="text-center py-12 text-gray-600">Loading...</div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              {featuredProducts.map(product => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+            <div className="text-center">
+              <Link
+                href="/products"
+                className="inline-block px-8 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition"
+              >
+                View All Products
+              </Link>
+            </div>
+          </>
+        )}
       </section>
 
       {/* Newsletter section */}
