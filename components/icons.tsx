@@ -86,7 +86,7 @@ export const Icons = {
     </svg>
   ),
   dollar: (
-    <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
       <path
         d="M8.16 5.314l1.429-1.429a2 2 0 012.828 0l4.828 4.828a2 2 0 010 2.828l-1.429 1.429m-9.9-9.9l1.429-1.429a2 2 0 012.828 0l4.828 4.828a2 2 0 010 2.828l-1.429 1.429m-9.9-9.9l9.9 9.9m0 0l1.429-1.429a2 2 0 012.828 0l4.828 4.828a2 2 0 010 2.828l-1.429 1.429"
         stroke="currentColor"

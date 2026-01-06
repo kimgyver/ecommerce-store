@@ -44,7 +44,6 @@ export default function StatisticsPage() {
 
   useEffect(() => {
     // 타이틀 변경
-    document.title = "Statistics | Admin";
 
     // 파비콘 변경
     changeFavicon("⚙️");

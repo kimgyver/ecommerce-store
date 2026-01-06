@@ -191,8 +191,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ quantity })
       });
       if (response.ok) {
-        // Success - keep the current order (just verified the quantity was updated)
-        // Don't call loadCart() to preserve the order
+        // Reload cart to get updated prices (especially for B2B quantity-based pricing)
+        await loadCart();
       } else {
         const errorData = await response.json();
         // Revert on error and set error state

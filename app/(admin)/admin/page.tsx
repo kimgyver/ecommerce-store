@@ -34,12 +34,6 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // 타이틀 변경
-    document.title = "Dashboard | Admin";
-
-    // 파비콘 변경
-    changeFavicon("⚙️");
-
     fetchStats();
   }, []);
 
@@ -103,22 +97,22 @@ export default function DashboardPage() {
         <h2 className="text-2xl font-bold mb-6">Quick Actions</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <ActionButton
-            href="/dashboard/products"
+            href="/admin/products"
             label="Add Product"
             icon={Icons.plus}
           />
           <ActionButton
-            href="/dashboard/products"
+            href="/admin/products"
             label="Manage Products"
             icon={Icons.documentDuplicate}
           />
           <ActionButton
-            href="/dashboard/orders"
+            href="/admin/orders"
             label="View Orders"
             icon={Icons.listLarge}
           />
           <ActionButton
-            href="/dashboard/statistics"
+            href="/admin/statistics"
             label="View Statistics"
             icon={Icons.trending}
           />

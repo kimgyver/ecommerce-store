@@ -36,7 +36,6 @@ export default function ProductsPage() {
 
   useEffect(() => {
     // 타이틀 변경
-    document.title = "Products | Admin";
 
     // 파비콘 변경
     changeFavicon("⚙️");
@@ -95,7 +94,7 @@ export default function ProductsPage() {
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-4xl font-bold">Products</h1>
         <Link
-          href="/dashboard/products/new"
+          href="/admin/products/new"
           className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold"
         >
           ➕ Add Product
@@ -169,7 +168,7 @@ export default function ProductsPage() {
                   </td>
                   <td className="px-6 py-4 text-sm space-x-2">
                     <Link
-                      href={`/dashboard/products/${product.id}`}
+                      href={`/admin/products/${product.id}`}
                       className="text-blue-600 hover:text-blue-800 font-medium"
                     >
                       Edit

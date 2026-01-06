@@ -2,21 +2,55 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { getProductPrice } from "@/lib/pricing";
 
 const uploadDir = join(process.cwd(), "public", "uploads", "products");
 
 export async function GET() {
   try {
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id || null;
+
     const products = await prisma.product.findMany({
       orderBy: {
         createdAt: "desc"
       }
     });
-    return NextResponse.json(products);
+
+    // Apply role-based pricing to each product
+    const productsWithPricing = await Promise.all(
+      products.map(async product => {
+        try {
+          const effectivePrice = await getProductPrice(
+            product.id,
+            userId,
+            1 // Default quantity for listing
+          );
+          return {
+            ...product,
+            price: effectivePrice
+          };
+        } catch (priceError) {
+          console.error(
+            `Error getting price for product ${product.id}:`,
+            priceError
+          );
+          // Return base price if pricing fails
+          return product;
+        }
+      })
+    );
+
+    return NextResponse.json(productsWithPricing);
   } catch (error) {
     console.error("Error fetching products:", error);
     return NextResponse.json(
-      { error: "Failed to fetch products" },
+      {
+        error: "Failed to fetch products",
+        details: error instanceof Error ? error.message : String(error)
+      },
       { status: 500 }
     );
   }
@@ -63,8 +97,13 @@ export async function POST(request: Request) {
       }
     }
 
+    // Generate SKU: Category prefix + timestamp
+    const skuPrefix = normalizedCategory.substring(0, 3).toUpperCase();
+    const sku = `${skuPrefix}-${Date.now()}`;
+
     const product = await prisma.product.create({
       data: {
+        sku,
         name,
         description,
         price,

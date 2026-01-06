@@ -2,6 +2,9 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { writeFile, mkdir, unlink } from "fs/promises";
 import { join } from "path";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { getProductPrice } from "@/lib/pricing";
 
 const uploadDir = join(process.cwd(), "public", "uploads", "products");
 
@@ -12,6 +15,9 @@ export async function GET(
   try {
     const resolvedParams = await Promise.resolve(params);
     const productId = resolvedParams.id;
+
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id || null;
 
     const product = await prisma.product.findUnique({
       where: { id: productId },
@@ -30,7 +36,13 @@ export async function GET(
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
-    return NextResponse.json(product);
+    // Apply role-based pricing
+    const effectivePrice = await getProductPrice(productId, userId, 1);
+
+    return NextResponse.json({
+      ...product,
+      price: effectivePrice
+    });
   } catch (error) {
     console.error("Error fetching product:", error);
     return NextResponse.json(

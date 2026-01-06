@@ -1,6 +1,5 @@
 "use client";
 
-import { getProducts } from "@/lib/products-server";
 import { ProductCard } from "@/components/product-card";
 import { useState, useEffect } from "react";
 import type { Product } from "@/lib/products";
@@ -14,8 +13,16 @@ export default function ProductsPage() {
   useEffect(() => {
     const loadProducts = async () => {
       try {
-        const allProducts = await getProducts();
-        setProducts(allProducts);
+        // Use API endpoint to get role-based pricing
+        const response = await fetch("/api/products");
+        console.log("Products API response:", response.status);
+        if (response.ok) {
+          const allProducts = await response.json();
+          console.log("Products loaded:", allProducts.length, allProducts);
+          setProducts(allProducts);
+        } else {
+          console.error("Failed to fetch products:", response.status);
+        }
       } catch (error) {
         console.error("Failed to load products:", error);
       } finally {

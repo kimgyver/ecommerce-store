@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { getProductPrice } from "@/lib/pricing";
 
 interface CartItemWithProduct {
   id: string;
@@ -59,16 +60,29 @@ export async function GET(request: Request) {
       });
     }
 
-    // Format for client
+    // Format for client with role-based pricing
+    const formattedItemsPromises = cart.items.map(
+      async (item: CartItemWithProduct) => {
+        const effectivePrice = await getProductPrice(
+          item.productId,
+          session.user.id,
+          item.quantity
+        );
+        return {
+          id: item.productId,
+          name: item.product.name,
+          price: effectivePrice,
+          quantity: item.quantity,
+          image: item.product.image
+        };
+      }
+    );
+
+    const formattedItems = await Promise.all(formattedItemsPromises);
+
     const formattedCart = {
       id: cart.id,
-      items: cart.items.map((item: CartItemWithProduct) => ({
-        id: item.productId,
-        name: item.product.name,
-        price: item.product.price,
-        quantity: item.quantity,
-        image: item.product.image
-      }))
+      items: formattedItems
     };
 
     return NextResponse.json(formattedCart);

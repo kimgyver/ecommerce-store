@@ -23,6 +23,7 @@ export async function GET(request: Request) {
         name: true,
         phone: true,
         address: true,
+        role: true,
         createdAt: true,
         defaultRecipientName: true,
         defaultRecipientPhone: true,

@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { getProductPrice } from "@/lib/pricing";
 
 export async function PUT(
   request: Request,
@@ -84,12 +85,19 @@ export async function PUT(
       include: { product: true }
     });
 
+    // Calculate role-based price with new quantity
+    const effectivePrice = await getProductPrice(
+      updatedItem.productId,
+      session.user.id,
+      updatedItem.quantity
+    );
+
     return NextResponse.json({
       message: "Cart updated",
       item: {
         id: updatedItem.productId,
         name: updatedItem.product.name,
-        price: updatedItem.product.price,
+        price: effectivePrice,
         quantity: updatedItem.quantity,
         image: updatedItem.product.image
       }

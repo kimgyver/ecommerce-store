@@ -16,6 +16,10 @@ interface OrderItem {
 interface Order {
   id: string;
   userId: string;
+  user?: {
+    name: string | null;
+    email: string;
+  };
   totalPrice: number;
   status: string;
   createdAt: string;
@@ -46,7 +50,6 @@ export default function OrdersPage() {
 
   useEffect(() => {
     // 타이틀 변경
-    document.title = "Orders | Admin";
 
     // 파비콘 변경
     changeFavicon("⚙️");
@@ -57,10 +60,12 @@ export default function OrdersPage() {
   const fetchOrders = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch("/api/orders");
+      const response = await fetch("/api/admin/orders");
       if (response.ok) {
         const data = await response.json();
         setOrders(data);
+      } else {
+        console.error("Failed to fetch orders:", response.status);
       }
     } catch (error) {
       console.error("Failed to fetch orders:", error);
@@ -148,6 +153,17 @@ export default function OrdersPage() {
                   <p className="text-lg font-mono font-bold text-gray-900">
                     {order.id}
                   </p>
+                  {order.user && (
+                    <div className="mt-2">
+                      <p className="text-xs text-gray-500">Customer</p>
+                      <p className="text-sm font-medium text-gray-700">
+                        {order.user.name || "N/A"}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {order.user.email}
+                      </p>
+                    </div>
+                  )}
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-gray-600">Total</p>

@@ -1,25 +1,21 @@
 "use client";
 
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { AuthProvider } from "./auth-provider";
 import { CartProvider } from "@/lib/cart-context";
 import { Header } from "./header";
 
 export function Providers({ children }: { children: ReactNode }) {
-  const [mounted, setMounted] = useState(false);
+  const pathname = usePathname();
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return null;
-  }
+  // Hide header on admin pages
+  const isAdminPage = pathname?.startsWith("/admin");
 
   return (
     <AuthProvider>
       <CartProvider>
-        <Header />
+        {!isAdminPage && <Header />}
         {children}
       </CartProvider>
     </AuthProvider>

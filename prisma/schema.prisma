@@ -22,6 +22,12 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  // User role: customer (B2C), distributor (B2B), admin
+  role          String    @default("customer")
+  
+  // B2B specific fields
+  companyName   String?
+
   // Default shipping address info
   defaultRecipientName      String?
   defaultRecipientPhone     String?
@@ -33,6 +39,7 @@ model User {
   orders        Order[]
   wishlist      Wishlist[]
   reviews       Review[]
+  distributorPrices DistributorPrice[]
 
   // Always use profile shipping address if true
   alwaysUseProfileShipping Boolean @default(false)
@@ -40,9 +47,10 @@ model User {
 
 model Product {
   id            String    @id @default(cuid())
+  sku           String    @unique  // Business identifier (e.g., "NIKE-001")
   name          String
   description   String
-  price         Float
+  price         Float     // B2C base price
   image         String
   category      String
   stock         Int       @default(100)
@@ -53,6 +61,7 @@ model Product {
   cartItems     CartItem[]
   wishlist      Wishlist[]
   reviews       Review[]
+  distributorPrices DistributorPrice[]
 }
 
 model Order {
@@ -155,4 +164,21 @@ model CartItem {
   @@unique([cartId, productId])
   @@index([cartId])
   @@index([productId])
+}
+
+// B2B Distributor pricing model
+model DistributorPrice {
+  id              String   @id @default(cuid())
+  productId       String
+  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  distributorId   String
+  distributor     User     @relation(fields: [distributorId], references: [id], onDelete: Cascade)
+  customPrice     Float    // Base B2B price for this distributor
+  discountTiers   Json?    // Quantity-based discount tiers: [{ minQty: 1, maxQty: 10, price: 80 }, ...]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([productId, distributorId])
+  @@index([productId])
+  @@index([distributorId])
 }

@@ -1,6 +1,5 @@
 "use client";
 
-import { getProductById, getProductsByCategory } from "@/lib/products-server";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useCart } from "@/lib/cart-context";
@@ -24,16 +23,27 @@ export default function ProductDetailPage() {
   useEffect(() => {
     const loadProduct = async () => {
       try {
-        const productData = await getProductById(id);
-        if (!productData) {
+        // Use API endpoint to get role-based pricing
+        const response = await fetch(`/api/products/${id}`);
+        if (!response.ok) {
           notFound();
         }
+        const productData = await response.json();
         setProduct(productData);
 
-        // Load related products
+        // Load related products from same category
         if (productData.category) {
-          const related = await getProductsByCategory(productData.category);
-          setRelatedProducts(related.filter(p => p.id !== id).slice(0, 3));
+          const allProductsResponse = await fetch("/api/products");
+          if (allProductsResponse.ok) {
+            const allProducts = await allProductsResponse.json();
+            const related = allProducts
+              .filter(
+                (p: Product) =>
+                  p.category === productData.category && p.id !== id
+              )
+              .slice(0, 3);
+            setRelatedProducts(related);
+          }
         }
       } catch (error) {
         console.error("Failed to load product:", error);

@@ -1,8 +1,8 @@
 "use client";
 
-import { useSession } from "next-auth/react";
-import { useRouter, usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useSession, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Icons } from "@/components/icons";
 
@@ -14,14 +14,27 @@ export default function AdminLayout({
   const { data: session, status } = useSession();
   const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/auth/login");
+    if (status === "authenticated" && session?.user?.email) {
+      // Check if user is admin
+      fetch("/api/user/profile")
+        .then(res => res.json())
+        .then(data => {
+          setIsAdmin(data.role === "admin");
+        })
+        .catch(() => setIsAdmin(false));
+    } else if (status === "unauthenticated") {
+      // Redirect to login
+      router.push("/auth/login?callbackUrl=/admin");
     }
-  }, [status, router]);
+  }, [status, session, router]);
 
-  if (status === "loading") {
+  if (
+    status === "loading" ||
+    (status === "authenticated" && isAdmin === null)
+  ) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -29,8 +42,13 @@ export default function AdminLayout({
     );
   }
 
-  // Check if user is authenticated (TODO: Add admin role check when available)
-  if (status !== "authenticated") {
+  // Redirect to login if not authenticated
+  if (status === "unauthenticated") {
+    return null; // Will redirect in useEffect
+  }
+
+  // Show access denied if authenticated but not admin
+  if (status === "authenticated" && isAdmin === false) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -71,25 +89,31 @@ export default function AdminLayout({
 
         <nav className="p-4 space-y-2 flex-1 overflow-auto">
           <NavLink
-            href="/dashboard"
+            href="/admin"
             icon={Icons.dashboard}
             label="Dashboard"
             isOpen={isSidebarOpen}
           />
           <NavLink
-            href="/dashboard/products"
+            href="/admin/products"
             icon={Icons.products}
             label="Products"
             isOpen={isSidebarOpen}
           />
           <NavLink
-            href="/dashboard/orders"
+            href="/admin/orders"
             icon={Icons.orders}
             label="Orders"
             isOpen={isSidebarOpen}
           />
           <NavLink
-            href="/dashboard/statistics"
+            href="/admin/b2b-pricing"
+            icon={Icons.dollar}
+            label="B2B Pricing"
+            isOpen={isSidebarOpen}
+          />
+          <NavLink
+            href="/admin/statistics"
             icon={Icons.statistics}
             label="Statistics"
             isOpen={isSidebarOpen}
@@ -97,14 +121,26 @@ export default function AdminLayout({
         </nav>
 
         {/* User info at bottom */}
-        {isSidebarOpen && (
-          <div className="p-4 border-t border-gray-800">
-            <p className="text-sm text-gray-400">Logged in as</p>
-            <p className="text-white font-semibold truncate">
-              {session?.user?.email}
-            </p>
-          </div>
-        )}
+        <div className="border-t border-gray-800">
+          {isSidebarOpen && (
+            <div className="p-4">
+              <p className="text-sm text-gray-400">Logged in as</p>
+              <p className="text-white font-semibold truncate">
+                {session?.user?.email}
+              </p>
+            </div>
+          )}
+          <button
+            onClick={() => signOut({ callbackUrl: "/" })}
+            className={`w-full p-4 hover:bg-gray-800 transition flex items-center gap-3 ${
+              !isSidebarOpen ? "justify-center" : ""
+            }`}
+            title="Logout"
+          >
+            {Icons.logout}
+            {isSidebarOpen && <span>Logout</span>}
+          </button>
+        </div>
       </aside>
 
       {/* Main Content */}
