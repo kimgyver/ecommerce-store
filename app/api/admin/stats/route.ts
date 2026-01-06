@@ -33,11 +33,39 @@ export async function GET(request: Request) {
       where: { status: "pending" }
     });
 
+    // Get user statistics
+    const totalUsers = await prisma.user.count();
+    const customerCount = await prisma.user.count({
+      where: { role: "customer" }
+    });
+    const distributorCount = await prisma.user.count({
+      where: { role: "distributor" }
+    });
+    const adminCount = await prisma.user.count({
+      where: { role: "admin" }
+    });
+
+    // Get new users this month
+    const now = new Date();
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const newUsersThisMonth = await prisma.user.count({
+      where: {
+        createdAt: {
+          gte: firstDayOfMonth
+        }
+      }
+    });
+
     return NextResponse.json({
       totalProducts,
       totalOrders,
       totalRevenue,
-      pendingOrders
+      pendingOrders,
+      totalUsers,
+      customerCount,
+      distributorCount,
+      adminCount,
+      newUsersThisMonth
     });
   } catch (error) {
     console.error("Error fetching stats:", error);

@@ -10,6 +10,11 @@ interface DashboardStats {
   totalOrders: number;
   totalRevenue: number;
   pendingOrders: number;
+  totalUsers: number;
+  customerCount: number;
+  distributorCount: number;
+  adminCount: number;
+  newUsersThisMonth: number;
 }
 
 // 파비콘 변경 함수
@@ -89,6 +94,41 @@ export default function DashboardPage() {
           value={stats?.pendingOrders ?? 0}
           icon={Icons.clock}
           color="bg-orange-500"
+        />
+      </div>
+
+      {/* User Stats */}
+      <h2 className="text-2xl font-bold mb-4">User Statistics</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+        <StatCard
+          title="Total Users"
+          value={stats?.totalUsers ?? 0}
+          icon={Icons.user}
+          color="bg-indigo-500"
+        />
+        <StatCard
+          title="Customers"
+          value={stats?.customerCount ?? 0}
+          icon={Icons.user}
+          color="bg-green-500"
+        />
+        <StatCard
+          title="Distributors"
+          value={stats?.distributorCount ?? 0}
+          icon={Icons.user}
+          color="bg-blue-500"
+        />
+        <StatCard
+          title="Admins"
+          value={stats?.adminCount ?? 0}
+          icon={Icons.user}
+          color="bg-red-500"
+        />
+        <StatCard
+          title="New This Month"
+          value={stats?.newUsersThisMonth ?? 0}
+          icon={Icons.user}
+          color="bg-teal-500"
         />
       </div>
 

@@ -99,6 +99,36 @@ export async function GET(request: Request) {
       });
     }
 
+    // User statistics
+    const totalUsers = await prisma.user.count();
+    const usersByRole = {
+      customer: await prisma.user.count({ where: { role: "customer" } }),
+      distributor: await prisma.user.count({ where: { role: "distributor" } }),
+      admin: await prisma.user.count({ where: { role: "admin" } })
+    };
+
+    // New users last 7 days
+    const dailyNewUsers: { date: string; count: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split("T")[0];
+
+      const nextDate = new Date(date);
+      nextDate.setDate(nextDate.getDate() + 1);
+
+      const count = await prisma.user.count({
+        where: {
+          createdAt: {
+            gte: date,
+            lt: nextDate
+          }
+        }
+      });
+
+      dailyNewUsers.push({ date: dateStr, count });
+    }
+
     return NextResponse.json({
       totalRevenue,
       totalOrders,
@@ -106,7 +136,10 @@ export async function GET(request: Request) {
       averageOrderValue,
       topProducts,
       ordersByStatus,
-      dailyRevenue
+      dailyRevenue,
+      totalUsers,
+      usersByRole,
+      dailyNewUsers
     });
   } catch (error) {
     console.error("Error fetching statistics:", error);

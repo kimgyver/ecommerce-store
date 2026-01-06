@@ -19,6 +19,16 @@ interface StatisticsData {
     date: string;
     revenue: number;
   }>;
+  totalUsers: number;
+  usersByRole: {
+    customer: number;
+    distributor: number;
+    admin: number;
+  };
+  dailyNewUsers: Array<{
+    date: string;
+    count: number;
+  }>;
 }
 
 // 파비콘 변경 함수
@@ -171,6 +181,82 @@ export default function StatisticsPage() {
                         width: `${(count / (stats?.totalOrders || 1)) * 100}%`
                       }}
                     ></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500">No data available</p>
+          )}
+        </div>
+
+        {/* User Statistics */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-2xl font-bold mb-6">User Statistics</h2>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-700">Total Users</span>
+              <span className="text-2xl font-bold text-indigo-600">
+                {stats?.totalUsers ?? 0}
+              </span>
+            </div>
+            {stats?.usersByRole && (
+              <>
+                <div className="flex justify-between items-center border-t pt-4">
+                  <span className="text-gray-700">Customers</span>
+                  <span className="text-xl font-semibold text-green-600">
+                    {stats.usersByRole.customer}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700">Distributors</span>
+                  <span className="text-xl font-semibold text-blue-600">
+                    {stats.usersByRole.distributor}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700">Admins</span>
+                  <span className="text-xl font-semibold text-red-600">
+                    {stats.usersByRole.admin}
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* New Users Chart */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-2xl font-bold mb-6">New Users (Last 7 Days)</h2>
+          {stats?.dailyNewUsers && stats.dailyNewUsers.length > 0 ? (
+            <div className="space-y-2">
+              {stats.dailyNewUsers.map(day => (
+                <div key={day.date} className="flex items-center gap-4">
+                  <span className="text-sm text-gray-600 w-24">
+                    {new Date(day.date).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric"
+                    })}
+                  </span>
+                  <div className="flex-1 bg-gray-200 rounded-full h-6">
+                    <div
+                      className="bg-teal-500 h-6 rounded-full flex items-center justify-end pr-2"
+                      style={{
+                        width: `${Math.max(
+                          (day.count /
+                            Math.max(
+                              ...stats.dailyNewUsers.map(d => d.count),
+                              1
+                            )) *
+                            100,
+                          5
+                        )}%`
+                      }}
+                    >
+                      <span className="text-xs font-semibold text-white">
+                        {day.count}
+                      </span>
+                    </div>
                   </div>
                 </div>
               ))}

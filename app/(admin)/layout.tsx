@@ -107,6 +107,12 @@ export default function AdminLayout({
             isOpen={isSidebarOpen}
           />
           <NavLink
+            href="/admin/users"
+            icon={Icons.user}
+            label="Users"
+            isOpen={isSidebarOpen}
+          />
+          <NavLink
             href="/admin/b2b-pricing"
             icon={Icons.dollar}
             label="B2B Pricing"
