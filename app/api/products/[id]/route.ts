@@ -41,7 +41,8 @@ export async function GET(
 
     return NextResponse.json({
       ...product,
-      price: effectivePrice
+      basePrice: product.price, // Original price
+      price: effectivePrice // B2B price if applicable
     });
   } catch (error) {
     console.error("Error fetching product:", error);

@@ -30,7 +30,8 @@ export async function GET() {
           );
           return {
             ...product,
-            price: effectivePrice
+            basePrice: product.price, // Original price
+            price: effectivePrice // B2B price if applicable
           };
         } catch (priceError) {
           console.error(

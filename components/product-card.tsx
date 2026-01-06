@@ -79,9 +79,22 @@ export function ProductCard({ product }: ProductCardProps) {
         </div>
 
         <div className="flex justify-between items-center mt-4">
-          <span className="text-xl font-bold text-blue-600">
-            ${product.price.toLocaleString("en-US")}
-          </span>
+          <div className="flex flex-col">
+            {product.basePrice && product.basePrice !== product.price ? (
+              <>
+                <span className="text-sm text-gray-500 line-through">
+                  ${product.basePrice.toFixed(2)}
+                </span>
+                <span className="text-xl font-bold text-blue-600">
+                  ${product.price.toFixed(2)}
+                </span>
+              </>
+            ) : (
+              <span className="text-xl font-bold text-blue-600">
+                ${product.price.toFixed(2)}
+              </span>
+            )}
+          </div>
           <button
             onClick={handleAddToCart}
             disabled={isAdding || (product.stock ?? 0) === 0}

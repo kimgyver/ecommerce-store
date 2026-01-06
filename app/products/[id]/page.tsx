@@ -113,9 +113,28 @@ export default function ProductDetailPage() {
 
           <div className="mt-8 border-t border-b py-8">
             <p className="text-gray-600">Price</p>
-            <p className="text-4xl font-bold text-blue-600 mt-2">
-              ${product.price.toLocaleString("en-US")}
-            </p>
+            {product.basePrice && product.basePrice !== product.price ? (
+              <div className="mt-2">
+                <p className="text-2xl text-gray-500 line-through">
+                  ${product.basePrice.toFixed(2)}
+                </p>
+                <p className="text-4xl font-bold text-blue-600 mt-1">
+                  ${product.price.toFixed(2)}
+                </p>
+                <p className="text-sm text-green-600 font-semibold mt-2">
+                  Save ${(product.basePrice - product.price).toFixed(2)} (
+                  {(
+                    ((product.basePrice - product.price) / product.basePrice) *
+                    100
+                  ).toFixed(0)}
+                  % off)
+                </p>
+              </div>
+            ) : (
+              <p className="text-4xl font-bold text-blue-600 mt-2">
+                ${product.price.toFixed(2)}
+              </p>
+            )}
           </div>
 
           {/* Stock status */}
@@ -221,9 +240,21 @@ export default function ProductDetailPage() {
                 </div>
                 <div className="p-4">
                   <h3 className="font-semibold">{relatedProduct.name}</h3>
-                  <p className="text-blue-600 font-bold mt-2">
-                    ${relatedProduct.price.toLocaleString("en-US")}
-                  </p>
+                  {relatedProduct.basePrice &&
+                  relatedProduct.basePrice !== relatedProduct.price ? (
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-500 line-through">
+                        ${relatedProduct.basePrice.toFixed(2)}
+                      </p>
+                      <p className="text-blue-600 font-bold">
+                        ${relatedProduct.price.toFixed(2)}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-blue-600 font-bold mt-2">
+                      ${relatedProduct.price.toFixed(2)}
+                    </p>
+                  )}
                 </div>
               </a>
             ))}
