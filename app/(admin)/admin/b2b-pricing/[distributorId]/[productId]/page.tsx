@@ -115,7 +115,9 @@ export default function EditB2BPricingPage({
 
       if (response.ok) {
         alert("Pricing updated successfully!");
-        router.push("/admin/b2b-pricing");
+        router.push(
+          `/admin/b2b-pricing?distributor=${resolvedParams.distributorId}`
+        );
       } else {
         const error = await response.json();
         alert(`Failed to update: ${error.error}`);
@@ -141,7 +143,9 @@ export default function EditB2BPricingPage({
 
       if (response.ok) {
         alert("Pricing deleted successfully!");
-        router.push("/admin/b2b-pricing");
+        router.push(
+          `/admin/b2b-pricing?distributor=${resolvedParams.distributorId}`
+        );
       } else {
         alert("Failed to delete pricing");
       }
@@ -199,7 +203,7 @@ export default function EditB2BPricingPage({
           Product or distributor not found
         </p>
         <Link
-          href="/admin/b2b-pricing"
+          href={`/admin/b2b-pricing?distributor=${resolvedParams?.distributorId}`}
           className="text-blue-600 hover:underline"
         >
           ← Back to B2B Pricing
@@ -212,7 +216,7 @@ export default function EditB2BPricingPage({
     <div className="max-w-4xl">
       <div className="mb-6">
         <Link
-          href="/admin/b2b-pricing"
+          href={`/admin/b2b-pricing?distributor=${resolvedParams?.distributorId}`}
           className="text-blue-600 hover:text-blue-700 text-sm font-medium"
         >
           ← Back to B2B Pricing
@@ -392,7 +396,7 @@ export default function EditB2BPricingPage({
           </div>
           <div className="flex gap-3">
             <Link
-              href="/admin/b2b-pricing"
+              href={`/admin/b2b-pricing?distributor=${resolvedParams?.distributorId}`}
               className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition font-medium"
             >
               Cancel
