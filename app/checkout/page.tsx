@@ -19,6 +19,7 @@ interface CartItem {
   id: string;
   name: string;
   price: number;
+  basePrice?: number;
   quantity: number;
   image: string;
 }
@@ -225,17 +226,56 @@ export default function CheckoutPage() {
                   <p className="font-semibold">{item.name}</p>
                   <p className="text-sm text-gray-600">Qty: {item.quantity}</p>
                 </div>
-                <p className="font-semibold">
-                  ${(item.price * item.quantity).toFixed(2)}
-                </p>
+                <div className="text-right">
+                  {item.basePrice && item.basePrice !== item.price ? (
+                    <>
+                      <p className="text-sm text-gray-500 line-through">
+                        ${(item.basePrice * item.quantity).toFixed(2)}
+                      </p>
+                      <p className="font-semibold text-blue-600">
+                        ${(item.price * item.quantity).toFixed(2)}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="font-semibold">
+                      ${(item.price * item.quantity).toFixed(2)}
+                    </p>
+                  )}
+                </div>
               </div>
             ))}
 
             <div className="pt-4 space-y-3 border-t-2">
-              <div className="flex justify-between text-gray-600">
-                <span>Subtotal:</span>
-                <span>${totalAmount.toFixed(2)}</span>
-              </div>
+              {(() => {
+                const totalBasePrice = cartItems.reduce((sum, item) => {
+                  const basePrice = item.basePrice || item.price;
+                  return sum + basePrice * item.quantity;
+                }, 0);
+                const hasDiscount = totalBasePrice > totalAmount;
+
+                return (
+                  <>
+                    {hasDiscount && (
+                      <div className="flex justify-between text-gray-500">
+                        <span>Original Price:</span>
+                        <span className="line-through">
+                          ${totalBasePrice.toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-gray-600">
+                      <span>Subtotal:</span>
+                      <span
+                        className={
+                          hasDiscount ? "text-blue-600 font-semibold" : ""
+                        }
+                      >
+                        ${totalAmount.toFixed(2)}
+                      </span>
+                    </div>
+                  </>
+                );
+              })()}
               <div className="flex justify-between text-gray-600">
                 <span>Shipping:</span>
                 <span>Free</span>
@@ -346,7 +386,10 @@ export default function CheckoutPage() {
                         items: cartItems.map(item => ({
                           productId: item.id,
                           quantity: item.quantity,
-                          price: item.price
+                          price: parseFloat(item.price.toFixed(2)),
+                          basePrice: item.basePrice
+                            ? parseFloat(item.basePrice.toFixed(2))
+                            : undefined
                         })),
                         shipping,
                         paymentIntentId

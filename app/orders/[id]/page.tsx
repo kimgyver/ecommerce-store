@@ -10,6 +10,7 @@ interface OrderItem {
   id: string;
   quantity: number;
   price: number;
+  basePrice?: number;
   product: {
     id: string;
     name: string;
@@ -189,15 +190,32 @@ export default function OrderDetailPage() {
           <span className="text-gray-600 font-medium">Items:</span>
           <span className="font-semibold">{order.items.length}</span>
         </div>
-        <div className="flex items-center gap-2 text-sm">
+        <div className="flex flex-col items-end gap-1 text-sm">
           <span className="text-gray-600 font-medium">Total Amount:</span>
-          <span className="font-bold text-blue-600 text-lg">
-            $
-            {order.totalPrice.toLocaleString("en-US", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2
-            })}
-          </span>
+          {(() => {
+            const totalBasePrice = order.items.reduce((sum, item) => {
+              const basePrice = item.basePrice || item.price;
+              return sum + basePrice * item.quantity;
+            }, 0);
+            const hasDiscount = totalBasePrice > order.totalPrice;
+
+            return (
+              <>
+                {hasDiscount && (
+                  <span className="text-sm text-gray-500 line-through">
+                    ${totalBasePrice.toFixed(2)}
+                  </span>
+                )}
+                <span
+                  className={`font-bold text-lg ${
+                    hasDiscount ? "text-blue-600" : "text-gray-900"
+                  }`}
+                >
+                  ${order.totalPrice.toFixed(2)}
+                </span>
+              </>
+            );
+          })()}
         </div>
       </div>
 
@@ -234,13 +252,18 @@ export default function OrderDetailPage() {
                   </div>
                   <div>
                     <p className="text-gray-600">Price per Item</p>
-                    <p className="font-semibold">
-                      $
-                      {item.price.toLocaleString("en-US", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2
-                      })}
-                    </p>
+                    {item.basePrice && item.basePrice !== item.price ? (
+                      <>
+                        <p className="text-sm text-gray-500 line-through">
+                          ${item.basePrice.toFixed(2)}
+                        </p>
+                        <p className="font-semibold text-blue-600">
+                          ${item.price.toFixed(2)}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="font-semibold">${item.price.toFixed(2)}</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -248,13 +271,20 @@ export default function OrderDetailPage() {
               {/* Subtotal */}
               <div className="text-right">
                 <p className="text-gray-600 text-sm mb-1">Subtotal</p>
-                <p className="text-2xl font-bold text-blue-600">
-                  $
-                  {(item.price * item.quantity).toLocaleString("en-US", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                  })}
-                </p>
+                {item.basePrice && item.basePrice !== item.price ? (
+                  <>
+                    <p className="text-sm text-gray-500 line-through">
+                      ${(item.basePrice * item.quantity).toFixed(2)}
+                    </p>
+                    <p className="text-2xl font-bold text-blue-600">
+                      ${(item.price * item.quantity).toFixed(2)}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-2xl font-bold text-blue-600">
+                    ${(item.price * item.quantity).toFixed(2)}
+                  </p>
+                )}
               </div>
             </div>
           ))}
@@ -263,13 +293,30 @@ export default function OrderDetailPage() {
         {/* Order Total */}
         <div className="bg-gray-50 px-6 py-4 border-t flex justify-between items-center">
           <p className="text-lg font-bold">Order Total:</p>
-          <p className="text-3xl font-bold text-blue-600">
-            $
-            {order.totalPrice.toLocaleString("en-US", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2
-            })}
-          </p>
+          {(() => {
+            const totalBasePrice = order.items.reduce((sum, item) => {
+              const basePrice = item.basePrice || item.price;
+              return sum + basePrice * item.quantity;
+            }, 0);
+            const hasDiscount = totalBasePrice > order.totalPrice;
+
+            return (
+              <div className="text-right">
+                {hasDiscount && (
+                  <p className="text-lg text-gray-500 line-through">
+                    ${totalBasePrice.toFixed(2)}
+                  </p>
+                )}
+                <p
+                  className={`text-3xl font-bold ${
+                    hasDiscount ? "text-blue-600" : "text-gray-900"
+                  }`}
+                >
+                  ${order.totalPrice.toFixed(2)}
+                </p>
+              </div>
+            );
+          })()}
         </div>
       </div>
 

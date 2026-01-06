@@ -153,7 +153,7 @@ export default function ProductForm({
           ? "Product updated successfully"
           : "Product created successfully"
       );
-      router.push("/dashboard/products");
+      router.push("/admin/products");
       router.refresh();
     } catch (error) {
       console.error("Error saving product:", error);

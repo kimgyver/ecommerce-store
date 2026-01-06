@@ -71,7 +71,8 @@ export async function GET(request: Request) {
         return {
           id: item.productId,
           name: item.product.name,
-          price: effectivePrice,
+          basePrice: item.product.price, // Original price
+          price: effectivePrice, // B2B price if applicable
           quantity: item.quantity,
           image: item.product.image
         };

@@ -10,6 +10,7 @@ interface CartItem {
   id: string;
   name: string;
   price: number;
+  basePrice?: number;
   quantity: number;
   image: string;
 }
@@ -74,6 +75,14 @@ export default function CartPage() {
 
   const totalPrice = getTotalPrice();
 
+  // Calculate total base price (original price before discounts)
+  const totalBasePrice = items.reduce((sum, item) => {
+    const basePrice = item.basePrice || item.price;
+    return sum + basePrice * item.quantity;
+  }, 0);
+
+  const hasDiscount = totalBasePrice > totalPrice;
+
   const handleCheckout = async () => {
     setIsCheckingOut(true);
     try {
@@ -132,9 +141,20 @@ export default function CartPage() {
                   >
                     {item.name}
                   </Link>
-                  <p className="text-gray-600 mt-1">
-                    ${item.price.toLocaleString("en-US")}
-                  </p>
+                  {item.basePrice && item.basePrice !== item.price ? (
+                    <div className="mt-1">
+                      <p className="text-sm text-gray-500 line-through">
+                        ${item.basePrice.toFixed(2)}
+                      </p>
+                      <p className="text-gray-900 font-semibold">
+                        ${item.price.toFixed(2)}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-gray-600 mt-1">
+                      ${item.price.toFixed(2)}
+                    </p>
+                  )}
 
                   {/* Quantity control */}
                   <div className="flex items-center gap-3 mt-4">
@@ -201,7 +221,7 @@ export default function CartPage() {
                 {/* Subtotal and delete */}
                 <div className="text-right">
                   <p className="text-lg font-semibold">
-                    ${(item.price * item.quantity).toLocaleString("en-US")}
+                    ${(item.price * item.quantity).toFixed(2)}
                   </p>
                   <button
                     onClick={async () => {
@@ -252,9 +272,25 @@ export default function CartPage() {
                   {items.reduce((sum, item) => sum + item.quantity, 0)}
                 </span>
               </div>
+              {totalBasePrice > totalPrice && (
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Original Price</span>
+                  <span className="text-gray-500 line-through">
+                    ${totalBasePrice.toFixed(2)}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span>Subtotal</span>
-                <span>${totalPrice.toLocaleString("en-US")}</span>
+                <span
+                  className={
+                    totalBasePrice > totalPrice
+                      ? "text-blue-600 font-semibold"
+                      : ""
+                  }
+                >
+                  ${totalPrice.toFixed(2)}
+                </span>
               </div>
               <div className="flex justify-between text-gray-600">
                 <span>Shipping</span>
@@ -265,10 +301,7 @@ export default function CartPage() {
             <div className="flex justify-between text-xl font-bold mt-4 mb-6">
               <span>Total</span>
               <span>
-                $
-                {(totalPrice + (totalPrice > 100 ? 0 : 3)).toLocaleString(
-                  "en-US"
-                )}
+                ${(totalPrice + (totalPrice > 100 ? 0 : 3)).toFixed(2)}
               </span>
             </div>
 

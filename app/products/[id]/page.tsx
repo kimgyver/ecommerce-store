@@ -8,10 +8,23 @@ import type { Product } from "@/lib/products";
 import ReviewForm from "@/components/ReviewForm";
 import ReviewsList from "@/components/ReviewsList";
 
+interface DiscountTier {
+  minQty: number;
+  maxQty: number | null;
+  price: number;
+}
+
+interface ProductWithTiers extends Product {
+  discountTiers?: {
+    customPrice: number;
+    tiers: DiscountTier[];
+  } | null;
+}
+
 export default function ProductDetailPage() {
   const params = useParams();
   const id = params.id as string;
-  const [product, setProduct] = useState<Product | null>(null);
+  const [product, setProduct] = useState<ProductWithTiers | null>(null);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [quantity, setQuantity] = useState(1);
   const [isAdded, setIsAdded] = useState(false);
@@ -121,14 +134,6 @@ export default function ProductDetailPage() {
                 <p className="text-4xl font-bold text-blue-600 mt-1">
                   ${product.price.toFixed(2)}
                 </p>
-                <p className="text-sm text-green-600 font-semibold mt-2">
-                  Save ${(product.basePrice - product.price).toFixed(2)} (
-                  {(
-                    ((product.basePrice - product.price) / product.basePrice) *
-                    100
-                  ).toFixed(0)}
-                  % off)
-                </p>
               </div>
             ) : (
               <p className="text-4xl font-bold text-blue-600 mt-2">
@@ -136,6 +141,67 @@ export default function ProductDetailPage() {
               </p>
             )}
           </div>
+
+          {/* Tiered Pricing Table */}
+          {product.discountTiers &&
+            product.discountTiers.tiers &&
+            product.discountTiers.tiers.length > 0 && (
+              <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <svg
+                    className="w-5 h-5 text-blue-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+                    />
+                  </svg>
+                  <p className="text-sm font-bold text-blue-900">
+                    Volume Discount Pricing
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  {product.discountTiers.tiers.map((tier, index) => {
+                    const totalQuantity = cartItemQuantity + quantity;
+                    const isCurrentTier =
+                      totalQuantity >= tier.minQty &&
+                      (tier.maxQty === null || totalQuantity <= tier.maxQty);
+                    return (
+                      <div
+                        key={index}
+                        className={`flex justify-between items-center px-3 py-2 rounded ${
+                          isCurrentTier
+                            ? "bg-blue-600 text-white font-semibold"
+                            : "bg-white text-gray-700"
+                        }`}
+                      >
+                        <span className="text-sm">
+                          {tier.minQty}-{tier.maxQty || "∞"} units
+                        </span>
+                        <span className="font-semibold">
+                          ${tier.price.toFixed(2)} each
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+                {cartItemQuantity > 0 ? (
+                  <p className="text-xs text-blue-800 mt-3">
+                    💡 Total: {cartItemQuantity} in cart + {quantity} selected ={" "}
+                    <strong>{cartItemQuantity + quantity} units</strong>
+                  </p>
+                ) : (
+                  <p className="text-xs text-blue-800 mt-3">
+                    💡 Adjust quantity to see pricing changes
+                  </p>
+                )}
+              </div>
+            )}
 
           {/* Stock status */}
           <div className="mt-6">
@@ -174,7 +240,18 @@ export default function ProductDetailPage() {
               >
                 −
               </button>
-              <span className="px-4 py-2">{quantity}</span>
+              <input
+                type="number"
+                value={quantity}
+                onChange={e => {
+                  const value = parseInt(e.target.value) || 1;
+                  setQuantity(Math.max(1, Math.min(value, availableStock)));
+                }}
+                disabled={availableStock === 0}
+                className="w-20 px-2 py-2 text-center border-0 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                min="1"
+                max={availableStock}
+              />
               <button
                 onClick={() =>
                   setQuantity(Math.min(quantity + 1, availableStock))

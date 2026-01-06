@@ -7,6 +7,7 @@ interface CartItem {
   productId: string;
   quantity: number;
   price: number;
+  basePrice?: number;
 }
 
 interface ShippingInfo {
@@ -48,57 +49,65 @@ export async function POST(request: Request) {
     // 1. Check and update stock, create order, clear cart in a single transaction
     let order;
     try {
-      order = await prisma.$transaction(async tx => {
-        // Check and update stock
-        for (const item of items) {
-          const product = await tx.product.findUnique({
-            where: { id: item.productId }
-          });
-          if (!product || product.stock < item.quantity) {
-            throw new Error(`Product ${item.productId} out of stock`);
+      order = await prisma.$transaction(
+        async tx => {
+          // Check and update stock
+          for (const item of items) {
+            const product = await tx.product.findUnique({
+              where: { id: item.productId }
+            });
+            if (!product || product.stock < item.quantity) {
+              throw new Error(`Product ${item.productId} out of stock`);
+            }
+            await tx.product.update({
+              where: { id: item.productId },
+              data: { stock: { decrement: item.quantity } }
+            });
           }
-          await tx.product.update({
-            where: { id: item.productId },
-            data: { stock: { decrement: item.quantity } }
+          // Calculate total price
+          const totalPrice = items.reduce(
+            (sum: number, item: CartItem) => sum + item.price * item.quantity,
+            0
+          );
+          // Create order
+          const newOrder = await tx.order.create({
+            data: {
+              userId,
+              totalPrice,
+              paymentIntentId,
+              recipientName: shipping.name,
+              recipientPhone: shipping.phone,
+              shippingPostalCode: shipping.postalCode,
+              shippingAddress1: shipping.address1,
+              shippingAddress2: shipping.address2,
+              items: {
+                create: items.map((item: CartItem) => ({
+                  productId: item.productId,
+                  quantity: item.quantity,
+                  price: item.price,
+                  basePrice: item.basePrice
+                }))
+              }
+            },
+            include: { items: true }
           });
+          // Clear cart after order completion
+          await tx.cartItem.deleteMany({
+            where: {
+              cart: {
+                userId
+              }
+            }
+          });
+          return newOrder;
+        },
+        {
+          maxWait: 10000, // 10 seconds
+          timeout: 20000 // 20 seconds
         }
-        // Calculate total price
-        const totalPrice = items.reduce(
-          (sum: number, item: CartItem) => sum + item.price * item.quantity,
-          0
-        );
-        // Create order
-        const newOrder = await tx.order.create({
-          data: {
-            userId,
-            totalPrice,
-            paymentIntentId,
-            recipientName: shipping.name,
-            recipientPhone: shipping.phone,
-            shippingPostalCode: shipping.postalCode,
-            shippingAddress1: shipping.address1,
-            shippingAddress2: shipping.address2,
-            items: {
-              create: items.map((item: CartItem) => ({
-                productId: item.productId,
-                quantity: item.quantity,
-                price: item.price
-              }))
-            }
-          },
-          include: { items: true }
-        });
-        // Clear cart after order completion
-        await tx.cartItem.deleteMany({
-          where: {
-            cart: {
-              userId
-            }
-          }
-        });
-        return newOrder;
-      });
+      );
     } catch (err) {
+      console.error("Order transaction error:", err);
       // 트랜잭션 내에서 발생한 에러를 명확히 전달
       return NextResponse.json(
         {

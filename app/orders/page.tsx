@@ -10,6 +10,7 @@ interface OrderItem {
   id: string;
   quantity: number;
   price: number;
+  basePrice?: number;
   product: {
     id: string;
     name: string;
@@ -150,13 +151,30 @@ export default function OrdersPage() {
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-gray-600">Total</p>
-                  <p className="text-2xl font-bold text-blue-600">
-                    $
-                    {order.totalPrice.toLocaleString("en-US", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2
-                    })}
-                  </p>
+                  {(() => {
+                    const totalBasePrice = order.items.reduce((sum, item) => {
+                      const basePrice = item.basePrice || item.price;
+                      return sum + basePrice * item.quantity;
+                    }, 0);
+                    const hasDiscount = totalBasePrice > order.totalPrice;
+
+                    return (
+                      <>
+                        {hasDiscount && (
+                          <p className="text-sm text-gray-500 line-through">
+                            ${totalBasePrice.toFixed(2)}
+                          </p>
+                        )}
+                        <p
+                          className={`text-2xl font-bold ${
+                            hasDiscount ? "text-blue-600" : "text-gray-900"
+                          }`}
+                        >
+                          ${order.totalPrice.toFixed(2)}
+                        </p>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -192,27 +210,38 @@ export default function OrdersPage() {
                         <p className="text-sm text-gray-600 mt-1">
                           Quantity: {item.quantity}
                         </p>
-                        <p className="text-sm text-gray-600">
-                          Price at purchase: $
-                          {item.price.toLocaleString("en-US", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2
-                          })}
-                        </p>
+                        <div className="text-sm text-gray-600">
+                          {item.basePrice && item.basePrice !== item.price ? (
+                            <>
+                              <span className="line-through mr-2">
+                                Original: ${item.basePrice.toFixed(2)}
+                              </span>
+                              <span className="text-blue-600 font-semibold">
+                                Price: ${item.price.toFixed(2)}
+                              </span>
+                            </>
+                          ) : (
+                            <span>Price: ${item.price.toFixed(2)}</span>
+                          )}
+                        </div>
                       </div>
 
                       {/* Item Subtotal */}
                       <div className="text-right">
-                        <p className="font-semibold">
-                          $
-                          {(item.price * item.quantity).toLocaleString(
-                            "en-US",
-                            {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2
-                            }
-                          )}
-                        </p>
+                        {item.basePrice && item.basePrice !== item.price ? (
+                          <>
+                            <p className="text-sm text-gray-500 line-through">
+                              ${(item.basePrice * item.quantity).toFixed(2)}
+                            </p>
+                            <p className="font-semibold text-blue-600">
+                              ${(item.price * item.quantity).toFixed(2)}
+                            </p>
+                          </>
+                        ) : (
+                          <p className="font-semibold">
+                            ${(item.price * item.quantity).toFixed(2)}
+                          </p>
+                        )}
                       </div>
                     </div>
                   ))}

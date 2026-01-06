@@ -39,10 +39,42 @@ export async function GET(
     // Apply role-based pricing
     const effectivePrice = await getProductPrice(productId, userId, 1);
 
+    // Get discount tiers if user is a distributor
+    let discountTiers = null;
+    if (userId) {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { role: true }
+      });
+
+      if (user?.role === "distributor") {
+        const distributorPrice = await prisma.distributorPrice.findUnique({
+          where: {
+            productId_distributorId: {
+              productId,
+              distributorId: userId
+            }
+          },
+          select: {
+            customPrice: true,
+            discountTiers: true
+          }
+        });
+
+        if (distributorPrice) {
+          discountTiers = {
+            customPrice: distributorPrice.customPrice,
+            tiers: distributorPrice.discountTiers
+          };
+        }
+      }
+    }
+
     return NextResponse.json({
       ...product,
       basePrice: product.price, // Original price
-      price: effectivePrice // B2B price if applicable
+      price: effectivePrice, // B2B price if applicable
+      discountTiers // Tiered pricing info for distributors
     });
   } catch (error) {
     console.error("Error fetching product:", error);

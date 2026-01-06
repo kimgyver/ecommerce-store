@@ -97,7 +97,8 @@ model OrderItem {
   product       Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
   
   quantity      Int
-  price         Float     // Price at the time of purchase
+  price         Float     // Effective price at the time of purchase (with B2B discounts applied)
+  basePrice     Float?    // Original price before B2B discounts (null for non-discounted items)
   
   @@index([orderId])
   @@index([productId])

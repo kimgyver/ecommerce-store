@@ -1,6 +1,6 @@
 # E-Commerce Store
 
-A modern, full-stack e-commerce platform built with Next.js 16, React 19, and PostgreSQL. Features a complete admin dashboard, payment integration, and comprehensive product management system.
+A modern, full-stack e-commerce platform built with Next.js 16, React 19, and PostgreSQL. Features role-based B2B/B2C pricing, tiered volume discounts, complete admin dashboard, payment integration, and comprehensive product management system.
 
 ## Tech Stack
 
@@ -20,14 +20,18 @@ A modern, full-stack e-commerce platform built with Next.js 16, React 19, and Po
 - **Product Management** - Browse, search, and filter products by category
 - **Shopping Cart** - Add/remove items with optimistic updates and real-time stock validation
 - **User Authentication** - Register, login, and profile management with JWT sessions
-- **Order Management** - View order history with detailed status tracking
+- **Role-Based Pricing** - B2C (customer) vs B2B (distributor) pricing with automatic application
+- **Tiered Volume Discounts** - Quantity-based pricing tiers for B2B customers
+- **Order Management** - View order history with detailed status tracking and original price comparison
 - **Payment System** - Stripe integration with idempotent webhook handling (prevents duplicate orders)
 - **Inventory Management** - Automatic stock depletion on order completion with low stock alerts
 
 ### Admin Dashboard
 
 - **Product CRUD** - Create, read, update, delete products with image uploads
+- **B2B Pricing Management** - Set custom pricing and quantity-based discount tiers per distributor
 - **Order Management** - View and update order statuses in real-time
+- **User Management** - View and manage customer and distributor accounts
 - **Statistics Dashboard** - View sales metrics and analytics
 - **Responsive Admin Layout** - Collapsible sidebar with proper navigation
 
@@ -35,6 +39,9 @@ A modern, full-stack e-commerce platform built with Next.js 16, React 19, and Po
 
 - **Stock Status Display** - Visual indicators for in-stock, low-stock, and out-of-stock items
 - **Purchase Controls** - Disabled checkout for out-of-stock products with quantity validation
+- **Direct Quantity Input** - Type quantity directly instead of using +/- buttons only
+- **Volume Discount Visualization** - Real-time tier pricing display with cart quantity consideration
+- **Price Comparison** - Original price shown with strikethrough when B2B discounts apply
 - **Product Reviews** - Full review/rating system with 1-5 star ratings
 - **Related Products** - Automatic category-based product recommendations
 - **Instant Feedback** - Button loading states, success messages, and error handling
@@ -50,14 +57,15 @@ A modern, full-stack e-commerce platform built with Next.js 16, React 19, and Po
 
 ### Core Models
 
-- **User** - Authentication and profile management
+- **User** - Authentication, profile management, and role-based access (customer/distributor/admin)
 - **Product** - Product catalog with inventory tracking
 - **Order** - Order management with payment intent tracking
-- **OrderItem** - Line items for orders
+- **OrderItem** - Line items with price and basePrice for discount tracking
 - **Cart** - User shopping carts
 - **CartItem** - Items in shopping carts
 - **Review** - Product reviews and ratings
 - **Wishlist** - User wishlist management
+- **DistributorPrice** - B2B custom pricing and quantity-based discount tiers
 
 ## Key Implementation Details
 
@@ -88,9 +96,30 @@ A modern, full-stack e-commerce platform built with Next.js 16, React 19, and Po
 ### Authentication
 
 - JWT-based sessions with NextAuth.js
+- Role-based access control (customer, distributor, admin)
 - Protected routes for admin and checkout
 - Session persistence across requests
 - Automatic logout on session expiration
+
+### B2B Pricing System
+
+- **Role-Based Pricing**:
+
+  - Customers see standard B2C prices
+  - Distributors see custom B2B prices with automatic discounts
+  - Admin can configure pricing per distributor per product
+
+- **Tiered Volume Discounts**:
+
+  - Configure multiple quantity-based price tiers
+  - Example: 1-10 units @ $54, 11-50 units @ $49, 51+ units @ $44
+  - Automatic tier application based on total quantity (cart + selected)
+  - Real-time visual indication of active tier on product pages
+
+- **Price Transparency**:
+  - Original price shown with strikethrough when discount applies
+  - Applies to product cards, detail pages, cart, checkout, and order history
+  - Historical pricing preserved in order records (basePrice field)
 
 ### Stock Management
 
@@ -227,12 +256,12 @@ npm run dev
 
 2. **Admin Dashboard**
 
-   - After login, click "Dashboard" in header (appears only for admin)
-   - Or navigate to [http://localhost:3000/dashboard](http://localhost:3000/dashboard)
+   - After login, click "Admin" in header (appears only for admin)
+   - Or navigate to [http://localhost:3000/admin](http://localhost:3000/admin)
 
 3. **Product Management**
 
-   - Go to `Dashboard > Products`
+   - Go to `Admin > Products`
    - **View Products**: See all products with search functionality
    - **Add Product**: Click "Add Product" button
      - Fill in name, description, price, stock
@@ -245,17 +274,36 @@ npm run dev
      - Click "Update Product"
    - **Delete Product**: Click delete icon, confirm deletion
 
-4. **Order Management**
+4. **B2B Pricing Management**
 
-   - Go to `Dashboard > Orders`
+   - Go to `Admin > B2B Pricing`
+   - **Select Distributor**: Choose a distributor from the dropdown
+   - **View Pricing**: See all products with current B2B pricing
+   - **Set Custom Price**: Click "Set Price" next to product
+     - Enter custom base price for distributor
+     - Add quantity-based discount tiers:
+       - Min Qty, Max Qty (leave empty for unlimited), Price
+       - Example: 1-10 → $54, 11-50 → $49, 51+ → $44
+     - Click "Save Pricing"
+   - **Delete Pricing**: Remove custom pricing to revert to standard price
+
+5. **Order Management**
+
+   - Go to `Admin > Orders`
    - **View Orders**: See all orders with customer info
    - **Filter by Status**: Use status dropdown to filter
    - **Update Status**: Click status dropdown on order
      - Options: pending, processing, shipped, delivered, cancelled
      - Changes update in real-time
 
-5. **Statistics & Analytics**
-   - Go to `Dashboard > Statistics`
+6. **User Management**
+
+   - Go to `Admin > Users`
+   - View all users with their roles (customer/distributor/admin)
+   - See registration dates and account details
+
+7. **Statistics & Analytics**
+   - Go to `Admin > Statistics`
    - View key metrics:
      - Total Revenue
      - Total Orders
@@ -308,29 +356,31 @@ npm run dev
 
 ### Quick Reference URLs
 
-| Page               | URL                                        | Access        |
-| ------------------ | ------------------------------------------ | ------------- |
-| Homepage           | http://localhost:3000                      | Public        |
-| Products           | http://localhost:3000/products             | Public        |
-| Product Detail     | http://localhost:3000/products/[id]        | Public        |
-| Register           | http://localhost:3000/auth/register        | Public        |
-| Login              | http://localhost:3000/auth/login           | Public        |
-| Shopping Cart      | http://localhost:3000/cart                 | Authenticated |
-| Checkout           | http://localhost:3000/checkout             | Authenticated |
-| Order History      | http://localhost:3000/orders               | Authenticated |
-| User Profile       | http://localhost:3000/profile              | Authenticated |
-| Admin Dashboard    | http://localhost:3000/dashboard            | Admin Only    |
-| Product Management | http://localhost:3000/dashboard/products   | Admin Only    |
-| Order Management   | http://localhost:3000/dashboard/orders     | Admin Only    |
-| Statistics         | http://localhost:3000/dashboard/statistics | Admin Only    |
-| Prisma Studio      | http://localhost:5555                      | Development   |
+| Page               | URL                                     | Access        |
+| ------------------ | --------------------------------------- | ------------- |
+| Homepage           | http://localhost:3000                   | Public        |
+| Products           | http://localhost:3000/products          | Public        |
+| Product Detail     | http://localhost:3000/products/[id]     | Public        |
+| Register           | http://localhost:3000/auth/register     | Public        |
+| Login              | http://localhost:3000/auth/login        | Public        |
+| Shopping Cart      | http://localhost:3000/cart              | Authenticated |
+| Checkout           | http://localhost:3000/checkout          | Authenticated |
+| Order History      | http://localhost:3000/orders            | Authenticated |
+| User Profile       | http://localhost:3000/profile           | Authenticated |
+| Admin Dashboard    | http://localhost:3000/admin             | Admin Only    |
+| Product Management | http://localhost:3000/admin/products    | Admin Only    |
+| B2B Pricing        | http://localhost:3000/admin/b2b-pricing | Admin Only    |
+| Order Management   | http://localhost:3000/admin/orders      | Admin Only    |
+| User Management    | http://localhost:3000/admin/users       | Admin Only    |
+| Statistics         | http://localhost:3000/admin/statistics  | Admin Only    |
+| Prisma Studio      | http://localhost:5555                   | Development   |
 
 ## Project Structure
 
 ```
 ├── app/
-│   ├── (admin)/                 # Admin dashboard routes
-│   │   └── dashboard/
+│   ├── (admin)/                 # Admin routes
+│   │   └── admin/
 │   ├── (store)/                 # Customer-facing routes
 │   ├── api/                     # API endpoints
 │   ├── auth/                    # Authentication pages
@@ -344,6 +394,7 @@ npm run dev
 ├── lib/                         # Utilities and helpers
 │   ├── auth.ts                  # NextAuth config
 │   ├── cart-context.tsx         # Cart state management
+│   ├── pricing.ts               # B2B pricing logic
 │   ├── prisma.ts                # Prisma client
 │   └── products-server.ts       # Server-side product queries
 ├── prisma/
@@ -357,8 +408,8 @@ npm run dev
 
 ### Products
 
-- `GET /api/products` - List all products
-- `GET /api/products/[id]` - Get product details
+- `GET /api/products` - List all products (with role-based pricing)
+- `GET /api/products/[id]` - Get product details (with tiered pricing info for distributors)
 - `POST /api/products` - Create product (admin)
 - `PUT /api/products/[id]` - Update product (admin)
 - `DELETE /api/products/[id]` - Delete product (admin)
@@ -379,10 +430,17 @@ npm run dev
 
 ### Cart
 
-- `GET /api/cart` - Get user cart
+- `GET /api/cart` - Get user cart (with B2B pricing applied)
 - `POST /api/cart` - Add to cart
 - `PUT /api/cart/[productId]` - Update cart item
 - `DELETE /api/cart/[productId]` - Remove from cart
+
+### B2B Pricing
+
+- `GET /api/admin/b2b-pricing/[distributorId]` - Get pricing rules for distributor (admin)
+- `GET /api/admin/b2b-pricing/[distributorId]/[productId]` - Get specific product pricing (admin)
+- `POST /api/admin/b2b-pricing/[distributorId]/[productId]` - Create/update pricing (admin)
+- `DELETE /api/admin/b2b-pricing/[distributorId]/[productId]` - Delete custom pricing (admin)
 
 ### Payments
 
@@ -404,24 +462,60 @@ npm run dev
 - **Edit Product** - Update product details and images
 - **Delete Product** - Remove products with confirmation
 
+### B2B Pricing Management
+
+- **Distributor Selection** - Dropdown to select distributor
+- **Product Pricing List** - View all products with current B2B pricing
+- **Discount Tier Summary** - Visual overview of quantity-based pricing
+- **Set Custom Pricing** - Configure base price and multiple discount tiers
+- **Delete Pricing** - Remove custom pricing to revert to standard
+
 ### Order Management
 
 - **View Orders** - Filter by status (pending, processing, shipped, delivered, cancelled)
 - **Update Status** - Change order status in real-time
-- **Order Details** - View items, customer info, and payment details
+- **Order Details** - View items, customer info, payment details, and price history
+
+### User Management
+
+- **View Users** - List all users with role information
+- **User Details** - Registration dates and account information
 
 ## Future Enhancements
 
-- [ ] Manual Related Products configuration
+- [ ] Email notifications for order status updates
 - [ ] Advanced product filtering (price range, ratings)
-- [ ] Coupon/discount system
-- [ ] Email notifications
-- [ ] Analytics dashboard
+- [ ] Coupon/discount system for B2C customers
+- [ ] Manual related products configuration
+- [ ] Analytics dashboard with charts and graphs
 - [ ] Multi-language support
 - [ ] Product recommendations AI
-- [ ] Inventory alerts
+- [ ] Inventory alerts and reorder notifications
 - [ ] Product variants (size, color, etc.)
 - [ ] Wishlist management UI
+- [ ] Export pricing rules and orders to CSV/Excel
+- [ ] Bulk pricing updates for distributors
+
+## Troubleshooting
+
+### Prisma Client Issues
+
+If you encounter errors like "Unknown argument `basePrice`" after schema changes:
+
+```bash
+npx prisma generate
+```
+
+Then restart the development server.
+
+### Database Migration
+
+After pulling new code with schema changes:
+
+```bash
+npx prisma migrate dev
+npx prisma generate
+```
 
 ## License
 

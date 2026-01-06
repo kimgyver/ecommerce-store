@@ -143,7 +143,7 @@ export function Header() {
   const pathname = usePathname();
   const cartCount = items.reduce((count, item) => count + item.quantity, 0);
 
-  if (pathname.startsWith("/dashboard")) {
+  if (pathname.startsWith("/admin")) {
     return null;
   }
 

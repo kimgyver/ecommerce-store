@@ -13,6 +13,7 @@ export interface CartItem {
   id: string;
   name: string;
   price: number;
+  basePrice?: number; // Original price before B2B discount
   quantity: number;
   image: string;
 }
