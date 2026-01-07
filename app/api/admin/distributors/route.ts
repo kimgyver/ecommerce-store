@@ -32,9 +32,11 @@ export async function GET() {
         companyName: true,
         phone: true,
         createdAt: true,
+        defaultDiscountPercent: true,
         _count: {
           select: {
-            distributorPrices: true
+            distributorPrices: true,
+            categoryDiscounts: true
           }
         }
       },

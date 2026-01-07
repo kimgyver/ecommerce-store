@@ -17,17 +17,19 @@ export async function getProductPrice(
     `[Pricing] productId: ${productId}, userId: ${userId}, quantity: ${quantity}`
   );
 
-  // Get product base price
+  // Get product base price and category
   const product = await prisma.product.findUnique({
     where: { id: productId },
-    select: { price: true }
+    select: { price: true, category: true }
   });
 
   if (!product) {
     throw new Error("Product not found");
   }
 
-  console.log(`[Pricing] Base price: ${product.price}`);
+  console.log(
+    `[Pricing] Base price: ${product.price}, Category: ${product.category}`
+  );
 
   // For guest users or customers, return base price
   if (!userId) {
@@ -35,13 +37,15 @@ export async function getProductPrice(
     return product.price;
   }
 
-  // Get user role
+  // Get user role and default discount
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { role: true }
+    select: { role: true, defaultDiscountPercent: true }
   });
 
-  console.log(`[Pricing] User role: ${user?.role}`);
+  console.log(
+    `[Pricing] User role: ${user?.role}, defaultDiscountPercent: ${user?.defaultDiscountPercent}`
+  );
 
   if (!user || user.role === "customer") {
     console.log(`[Pricing] Customer, returning base price`);
@@ -62,8 +66,40 @@ export async function getProductPrice(
     console.log(`[Pricing] DistributorPrice found:`, distributorPrice);
 
     if (!distributorPrice) {
-      // No custom pricing, return base price
-      console.log(`[Pricing] No distributor pricing, returning base price`);
+      // No custom product pricing, check category-level discount
+      const categoryDiscount = await prisma.categoryDiscount.findUnique({
+        where: {
+          distributorId_category: {
+            distributorId: userId,
+            category: product.category
+          }
+        }
+      });
+
+      console.log(`[Pricing] CategoryDiscount found:`, categoryDiscount);
+
+      if (categoryDiscount && categoryDiscount.discountPercent > 0) {
+        const discountedPrice =
+          product.price * (1 - categoryDiscount.discountPercent / 100);
+        console.log(
+          `[Pricing] Applying category discount ${categoryDiscount.discountPercent}%: ${discountedPrice}`
+        );
+        return discountedPrice;
+      }
+
+      // No category discount, check for default discount
+      if (user.defaultDiscountPercent && user.defaultDiscountPercent > 0) {
+        const discountedPrice =
+          product.price * (1 - user.defaultDiscountPercent / 100);
+        console.log(
+          `[Pricing] Applying default discount ${user.defaultDiscountPercent}%: ${discountedPrice}`
+        );
+        return discountedPrice;
+      }
+      // No custom pricing, category discount, or default discount - return base price
+      console.log(
+        `[Pricing] No distributor pricing, category discount, or default discount - returning base price`
+      );
       return product.price;
     }
 

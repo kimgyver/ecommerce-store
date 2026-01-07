@@ -137,7 +137,7 @@ export default function AdminLayout({
             </div>
           )}
           <button
-            onClick={() => signOut({ callbackUrl: "/" })}
+            onClick={() => signOut({ callbackUrl: "/admin" })}
             className={`w-full p-4 hover:bg-gray-800 transition flex items-center gap-3 ${
               !isSidebarOpen ? "justify-center" : ""
             }`}

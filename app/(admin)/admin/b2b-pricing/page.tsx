@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { Toast } from "@/components/toast";
 
 interface Distributor {
   id: string;
@@ -11,8 +12,10 @@ interface Distributor {
   companyName: string | null;
   phone: string | null;
   createdAt: string;
+  defaultDiscountPercent: number | null;
   _count: {
     distributorPrices: number;
+    categoryDiscounts: number;
   };
 }
 
@@ -42,6 +45,12 @@ interface PricingRule {
   };
 }
 
+interface CategoryDiscount {
+  id: string;
+  category: string;
+  discountPercent: number;
+}
+
 export default function B2BPricingPage() {
   const searchParams = useSearchParams();
   const [distributors, setDistributors] = useState<Distributor[]>([]);
@@ -50,7 +59,27 @@ export default function B2BPricingPage() {
   const [distributorPricing, setDistributorPricing] = useState<PricingRule[]>(
     []
   );
+  const [categoryDiscounts, setCategoryDiscounts] = useState<
+    CategoryDiscount[]
+  >([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [defaultDiscount, setDefaultDiscount] = useState<string>("");
+  const [isSavingDiscount, setIsSavingDiscount] = useState(false);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [newCategory, setNewCategory] = useState<string>("");
+  const [newCategoryDiscount, setNewCategoryDiscount] = useState<string>("");
+  const [isSavingCategory, setIsSavingCategory] = useState(false);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
+
+  const showToast = (
+    message: string,
+    type: "success" | "error" = "success"
+  ) => {
+    setToast({ message, type });
+  };
 
   useEffect(() => {
     // Set page title
@@ -69,10 +98,16 @@ export default function B2BPricingPage() {
     // Load pricing info when distributor is selected
     if (selectedDistributor) {
       loadDistributorPricing();
+      loadCategoryDiscounts();
+      // Set default discount from selected distributor
+      const dist = distributors.find(d => d.id === selectedDistributor);
+      setDefaultDiscount(dist?.defaultDiscountPercent?.toString() || "");
     } else {
       setDistributorPricing([]);
+      setCategoryDiscounts([]);
+      setDefaultDiscount("");
     }
-  }, [selectedDistributor]);
+  }, [selectedDistributor, distributors]);
 
   const loadData = async () => {
     try {
@@ -90,7 +125,14 @@ export default function B2BPricingPage() {
       if (prodResponse.ok) {
         const data = await prodResponse.json();
         // /api/products returns array directly, not wrapped in {products: [...]}
-        setProducts(Array.isArray(data) ? data : []);
+        const allProducts = Array.isArray(data) ? data : [];
+        setProducts(allProducts);
+
+        // Extract unique categories
+        const uniqueCategories = [
+          ...new Set(allProducts.map(p => p.category))
+        ].sort();
+        setCategories(uniqueCategories);
       }
     } catch (error) {
       console.error("Failed to load data:", error);
@@ -113,6 +155,146 @@ export default function B2BPricingPage() {
       }
     } catch (error) {
       console.error("Failed to load distributor pricing:", error);
+    }
+  };
+
+  const loadCategoryDiscounts = async () => {
+    if (!selectedDistributor) return;
+
+    try {
+      const response = await fetch(
+        `/api/admin/distributors/${selectedDistributor}/category-discounts`,
+        { credentials: "include" }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setCategoryDiscounts(data.categoryDiscounts || []);
+      }
+    } catch (error) {
+      console.error("Failed to load category discounts:", error);
+    }
+  };
+
+  const handleSaveCategoryDiscount = async () => {
+    if (!selectedDistributor || !newCategory || !newCategoryDiscount) {
+      showToast(
+        "Please select a category and enter a discount percentage",
+        "error"
+      );
+      return;
+    }
+
+    const discountValue = parseFloat(newCategoryDiscount);
+    if (isNaN(discountValue) || discountValue < 0 || discountValue > 100) {
+      showToast("Please enter a valid discount percentage (0-100)", "error");
+      return;
+    }
+
+    setIsSavingCategory(true);
+    try {
+      const response = await fetch(
+        `/api/admin/distributors/${selectedDistributor}/category-discounts`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            category: newCategory,
+            discountPercent: discountValue
+          }),
+          credentials: "include"
+        }
+      );
+
+      if (response.ok) {
+        showToast("Category discount saved!");
+        setNewCategory("");
+        setNewCategoryDiscount("");
+        await loadCategoryDiscounts();
+      } else {
+        const error = await response.json();
+        showToast(`Failed: ${error.error || "Unknown error"}`, "error");
+      }
+    } catch (error) {
+      console.error("Failed to save category discount:", error);
+      showToast("Failed to save category discount", "error");
+    } finally {
+      setIsSavingCategory(false);
+    }
+  };
+
+  const handleDeleteCategoryDiscount = async (category: string) => {
+    if (!confirm(`Delete discount for ${category}?`)) return;
+
+    try {
+      const response = await fetch(
+        `/api/admin/distributors/${selectedDistributor}/category-discounts`,
+        {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ category }),
+          credentials: "include"
+        }
+      );
+
+      if (response.ok) {
+        showToast("Category discount deleted!");
+        await loadCategoryDiscounts();
+      } else {
+        showToast("Failed to delete category discount", "error");
+      }
+    } catch (error) {
+      console.error("Failed to delete category discount:", error);
+      showToast("Failed to delete category discount", "error");
+    }
+  };
+
+  const handleSaveDefaultDiscount = async () => {
+    if (!selectedDistributor) return;
+
+    const discountValue = parseFloat(defaultDiscount);
+    if (isNaN(discountValue) || discountValue < 0 || discountValue > 100) {
+      showToast("Please enter a valid discount percentage (0-100)", "error");
+      return;
+    }
+
+    setIsSavingDiscount(true);
+    try {
+      const response = await fetch(
+        `/api/admin/distributors/${selectedDistributor}/default-discount`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ defaultDiscountPercent: discountValue }),
+          credentials: "include"
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log("API response:", data);
+
+        // Update local state
+        setDistributors(prev =>
+          prev.map(d =>
+            d.id === selectedDistributor
+              ? { ...d, defaultDiscountPercent: discountValue }
+              : d
+          )
+        );
+        showToast("Default discount saved successfully!");
+        // Reload data to ensure consistency
+        await loadData();
+      } else {
+        const error = await response.json();
+        showToast(`Failed to save: ${error.error || "Unknown error"}`, "error");
+      }
+    } catch (error) {
+      console.error("Failed to save default discount:", error);
+      showToast("Failed to save default discount", "error");
+    } finally {
+      setIsSavingDiscount(false);
     }
   };
 
@@ -170,9 +352,24 @@ export default function B2BPricingPage() {
                       <div className="text-sm text-gray-600 mt-1">
                         {dist.email}
                       </div>
-                      <div className="text-xs text-blue-600 mt-2 font-medium">
-                        {dist._count.distributorPrices} custom price
-                        {dist._count.distributorPrices !== 1 ? "s" : ""}
+                      <div className="text-xs mt-2 space-y-1">
+                        {dist.defaultDiscountPercent !== null && (
+                          <div className="text-green-600 font-medium">
+                            Default: {dist.defaultDiscountPercent}%
+                          </div>
+                        )}
+                        {dist._count.categoryDiscounts > 0 && (
+                          <div className="text-purple-600 font-medium">
+                            {dist._count.categoryDiscounts} category discount
+                            {dist._count.categoryDiscounts !== 1 ? "s" : ""}
+                          </div>
+                        )}
+                        {dist._count.distributorPrices > 0 && (
+                          <div className="text-blue-600 font-medium">
+                            {dist._count.distributorPrices} custom price
+                            {dist._count.distributorPrices !== 1 ? "s" : ""}
+                          </div>
+                        )}
                       </div>
                     </button>
                   ))
@@ -204,10 +401,148 @@ export default function B2BPricingPage() {
                   </p>
                 </div>
 
-                <div className="p-6">
-                  <h3 className="text-lg font-semibold mb-4">
-                    Product Pricing
+                {/* Default Discount Section */}
+                <div className="p-6 border-b bg-blue-50">
+                  <h3 className="text-lg font-semibold mb-3">
+                    Default Discount
                   </h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    This discount applies to all products unless a specific
+                    price is set below
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 max-w-xs">
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          value={defaultDiscount}
+                          onChange={e => setDefaultDiscount(e.target.value)}
+                          placeholder="0"
+                          className="w-full px-4 py-2 pr-8 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
+                          %
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleSaveDefaultDiscount}
+                      disabled={isSavingDiscount}
+                      className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition"
+                    >
+                      {isSavingDiscount ? "Saving..." : "Save"}
+                    </button>
+                  </div>
+                  {selectedDist?.defaultDiscountPercent && (
+                    <p className="text-sm text-green-600 mt-3">
+                      ✓ Current default discount:{" "}
+                      {selectedDist.defaultDiscountPercent}%
+                    </p>
+                  )}
+                </div>
+
+                {/* Category Discount Section */}
+                <div className="p-6 border-b bg-purple-50">
+                  <div className="mb-4">
+                    <h3 className="text-lg font-semibold mb-2">
+                      Category Discounts
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      Set different discounts for specific product categories.{" "}
+                      <span className="font-medium text-purple-600">
+                        Overrides Default Discount.
+                      </span>
+                    </p>
+                  </div>
+
+                  {/* Existing category discounts */}
+                  {categoryDiscounts.length > 0 && (
+                    <div className="mb-4 space-y-2">
+                      {categoryDiscounts.map(cd => (
+                        <div
+                          key={cd.id}
+                          className="flex items-center justify-between p-3 bg-white rounded border"
+                        >
+                          <div>
+                            <span className="font-semibold">{cd.category}</span>
+                            <span className="text-purple-600 ml-3">
+                              {cd.discountPercent}% off
+                            </span>
+                          </div>
+                          <button
+                            onClick={() =>
+                              handleDeleteCategoryDiscount(cd.category)
+                            }
+                            className="text-red-600 hover:text-red-800 text-sm font-semibold"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Add new category discount */}
+                  <div className="space-y-3">
+                    <div className="flex gap-3">
+                      <select
+                        value={newCategory}
+                        onChange={e => setNewCategory(e.target.value)}
+                        className="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      >
+                        <option value="">Select category...</option>
+                        {categories
+                          .filter(
+                            cat =>
+                              !categoryDiscounts.find(cd => cd.category === cat)
+                          )
+                          .map(cat => (
+                            <option key={cat} value={cat}>
+                              {cat}
+                            </option>
+                          ))}
+                      </select>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          value={newCategoryDiscount}
+                          onChange={e => setNewCategoryDiscount(e.target.value)}
+                          placeholder="0"
+                          className="w-32 px-4 py-2 pr-8 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
+                          %
+                        </span>
+                      </div>
+                      <button
+                        onClick={handleSaveCategoryDiscount}
+                        disabled={isSavingCategory}
+                        className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition"
+                      >
+                        {isSavingCategory ? "Saving..." : "Add"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-6">
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold mb-2">
+                      Product Pricing
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      Set custom prices or tiered pricing for specific products.{" "}
+                      <span className="font-medium text-blue-600">
+                        Overrides Category Discounts and Default Discount.
+                      </span>
+                    </p>
+                  </div>
 
                   {products.length === 0 ? (
                     <div className="text-center py-8 text-gray-500">
@@ -288,6 +623,15 @@ export default function B2BPricingPage() {
             )}
           </div>
         </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
       )}
     </div>
   );

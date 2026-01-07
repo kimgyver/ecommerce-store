@@ -27,6 +27,7 @@ model User {
   
   // B2B specific fields
   companyName   String?
+  defaultDiscountPercent Float?  // Default discount % for all products (distributor only)
 
   // Default shipping address info
   defaultRecipientName      String?
@@ -40,6 +41,7 @@ model User {
   wishlist      Wishlist[]
   reviews       Review[]
   distributorPrices DistributorPrice[]
+  categoryDiscounts CategoryDiscount[]
 
   // Always use profile shipping address if true
   alwaysUseProfileShipping Boolean @default(false)
@@ -181,5 +183,19 @@ model DistributorPrice {
   
   @@unique([productId, distributorId])
   @@index([productId])
+  @@index([distributorId])
+}
+
+// B2B Category-level discount for distributors
+model CategoryDiscount {
+  id                String   @id @default(cuid())
+  distributorId     String
+  distributor       User     @relation(fields: [distributorId], references: [id], onDelete: Cascade)
+  category          String   // Product category (e.g., "Electronics", "Computers")
+  discountPercent   Float    // Discount percentage for this category
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@unique([distributorId, category])
   @@index([distributorId])
 }

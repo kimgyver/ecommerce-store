@@ -220,9 +220,20 @@ export default function CartPage() {
 
                 {/* Subtotal and delete */}
                 <div className="text-right">
-                  <p className="text-lg font-semibold">
-                    ${(item.price * item.quantity).toFixed(2)}
-                  </p>
+                  {item.basePrice && item.basePrice !== item.price ? (
+                    <div>
+                      <p className="text-sm text-gray-500 line-through">
+                        ${(item.basePrice * item.quantity).toFixed(2)}
+                      </p>
+                      <p className="text-lg font-semibold text-blue-600">
+                        ${(item.price * item.quantity).toFixed(2)}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-lg font-semibold">
+                      ${(item.price * item.quantity).toFixed(2)}
+                    </p>
+                  )}
                   <button
                     onClick={async () => {
                       setLoadingItems(prev =>

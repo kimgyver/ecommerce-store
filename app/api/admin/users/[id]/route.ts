@@ -35,7 +35,11 @@ export async function PATCH(
     const { role, name, companyName } = body;
 
     // Build update data
-    const updateData: any = {};
+    const updateData: {
+      role?: string;
+      name?: string;
+      companyName?: string;
+    } = {};
 
     if (role !== undefined) {
       // Validate role
