@@ -7,8 +7,8 @@ export interface Product {
   description: string;
   category: string;
   stock?: number;
-  rating?: number;
-  reviewCount?: number;
+  rating?: number | null;
+  reviewCount?: number | null;
   createdAt?: Date;
   updatedAt?: Date;
 }
