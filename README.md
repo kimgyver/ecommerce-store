@@ -29,7 +29,10 @@ A modern, full-stack e-commerce platform built with Next.js 16, React 19, and Po
 ### Admin Dashboard
 
 - **Product CRUD** - Create, read, update, delete products with image uploads
-- **B2B Pricing Management** - Set custom pricing and quantity-based discount tiers per distributor
+- **B2B Pricing Management** - Three-tier discount system:
+  - **Default Discount** - Global percentage discount per distributor (simplest, applies to all products)
+  - **Category Discounts** - Percentage discounts per product category (overrides default)
+  - **Product-Specific Pricing** - Custom prices and quantity-based discount tiers (highest priority, overrides category and default)
 - **Order Management** - View and update order statuses in real-time
 - **User Management** - View and manage customer and distributor accounts
 - **Statistics Dashboard** - View sales metrics and analytics
@@ -44,6 +47,7 @@ A modern, full-stack e-commerce platform built with Next.js 16, React 19, and Po
 - **Price Comparison** - Original price shown with strikethrough when B2B discounts apply
 - **Product Reviews** - Full review/rating system with 1-5 star ratings
 - **Related Products** - Automatic category-based product recommendations
+- **Toast Notifications** - Non-blocking auto-dismissing notifications (5s) for admin actions
 - **Instant Feedback** - Button loading states, success messages, and error handling
 
 ### Localization & Quality
@@ -57,7 +61,7 @@ A modern, full-stack e-commerce platform built with Next.js 16, React 19, and Po
 
 ### Core Models
 
-- **User** - Authentication, profile management, and role-based access (customer/distributor/admin)
+- **User** - Authentication, profile management, role-based access (customer/distributor/admin), and defaultDiscountPercent field
 - **Product** - Product catalog with inventory tracking
 - **Order** - Order management with payment intent tracking
 - **OrderItem** - Line items with price and basePrice for discount tracking
@@ -65,7 +69,8 @@ A modern, full-stack e-commerce platform built with Next.js 16, React 19, and Po
 - **CartItem** - Items in shopping carts
 - **Review** - Product reviews and ratings
 - **Wishlist** - User wishlist management
-- **DistributorPrice** - B2B custom pricing and quantity-based discount tiers
+- **DistributorPrice** - B2B custom pricing and quantity-based discount tiers (highest priority)
+- **CategoryDiscount** - Category-level percentage discounts per distributor (medium priority)
 
 ## Key Implementation Details
 
@@ -107,19 +112,43 @@ A modern, full-stack e-commerce platform built with Next.js 16, React 19, and Po
 
   - Customers see standard B2C prices
   - Distributors see custom B2B prices with automatic discounts
-  - Admin can configure pricing per distributor per product
+  - Admin can configure pricing per distributor using a three-tier system
+
+- **Three-Tier Discount Hierarchy** (from highest to lowest priority):
+
+  1. **Product-Specific Pricing** (Highest Priority)
+
+     - Custom base price per product per distributor
+     - Optional quantity-based discount tiers
+     - Example: 1-10 units @ $54, 11-50 units @ $49, 51+ units @ $44
+     - Overrides both category discounts and default discount
+
+  2. **Category Discounts** (Medium Priority)
+
+     - Percentage discount per product category (e.g., Electronics: 15%, Computers: 20%)
+     - Applied when no product-specific pricing exists
+     - Overrides default discount
+     - Simplifies management for large catalogs
+
+  3. **Default Discount** (Lowest Priority / Fallback)
+     - Global percentage discount for all products
+     - Applied when no product-specific pricing or category discount exists
+     - Example: Give distributor "ABC Corp" a default 15% discount on everything
+     - Reduces admin workload significantly (no need to set 1000s of individual prices)
 
 - **Tiered Volume Discounts**:
 
-  - Configure multiple quantity-based price tiers
+  - Configure multiple quantity-based price tiers for product-specific pricing
   - Example: 1-10 units @ $54, 11-50 units @ $49, 51+ units @ $44
   - Automatic tier application based on total quantity (cart + selected)
   - Real-time visual indication of active tier on product pages
+  - Only available for product-specific pricing (not category or default discounts)
 
 - **Price Transparency**:
   - Original price shown with strikethrough when discount applies
   - Applies to product cards, detail pages, cart, checkout, and order history
   - Historical pricing preserved in order records (basePrice field)
+  - Discount source clearly indicated (product/category/default)
 
 ### Stock Management
 
@@ -277,15 +306,41 @@ npm run dev
 4. **B2B Pricing Management**
 
    - Go to `Admin > B2B Pricing`
-   - **Select Distributor**: Choose a distributor from the dropdown
-   - **View Pricing**: See all products with current B2B pricing
-   - **Set Custom Price**: Click "Set Price" next to product
+   - **Select Distributor**: Choose a distributor from the sidebar
+
+     - View summary: Default discount %, category discount count, custom price count
+
+   - **Set Default Discount** (Blue Section)
+
+     - Enter a global percentage discount (0-100%) for the distributor
+     - Example: 15% means all products are 15% off by default
+     - This is the easiest way to manage pricing for 100s or 1000s of products
+     - Click "Save" to apply
+
+   - **Set Category Discounts** (Purple Section)
+
+     - Select a product category from the dropdown
+     - Enter a percentage discount (0-100%) for that category
+     - Example: Electronics → 20% off
+     - Overrides the default discount for products in this category
+     - View and delete existing category discounts
+     - Click "Save" to apply
+
+   - **Set Product-Specific Pricing** (White Section)
+
+     - Click "Set Price" or "Edit" next to any product
      - Enter custom base price for distributor
-     - Add quantity-based discount tiers:
+     - Optionally add quantity-based discount tiers:
        - Min Qty, Max Qty (leave empty for unlimited), Price
        - Example: 1-10 → $54, 11-50 → $49, 51+ → $44
+     - Overrides both category discounts and default discount
      - Click "Save Pricing"
-   - **Delete Pricing**: Remove custom pricing to revert to standard price
+
+   - **Delete Pricing**: Remove custom pricing to fall back to category or default discount
+
+   - **Priority System**:
+     - Product-Specific Pricing > Category Discount > Default Discount > Base Price
+     - Clear visual indicators show which discount level is active
 
 5. **Order Management**
 
@@ -437,9 +492,14 @@ npm run dev
 
 ### B2B Pricing
 
-- `GET /api/admin/b2b-pricing/[distributorId]` - Get pricing rules for distributor (admin)
+- `GET /api/admin/distributors` - Get all distributors with pricing summary (admin)
+- `PUT /api/admin/distributors/[id]/default-discount` - Set default discount % for distributor (admin)
+- `GET /api/admin/distributors/[id]/category-discounts` - Get category discounts for distributor (admin)
+- `POST /api/admin/distributors/[id]/category-discounts` - Create/update category discount (admin)
+- `DELETE /api/admin/distributors/[id]/category-discounts` - Delete category discount (admin)
+- `GET /api/admin/b2b-pricing/[distributorId]` - Get product-specific pricing rules for distributor (admin)
 - `GET /api/admin/b2b-pricing/[distributorId]/[productId]` - Get specific product pricing (admin)
-- `POST /api/admin/b2b-pricing/[distributorId]/[productId]` - Create/update pricing (admin)
+- `POST /api/admin/b2b-pricing/[distributorId]/[productId]` - Create/update product-specific pricing (admin)
 - `DELETE /api/admin/b2b-pricing/[distributorId]/[productId]` - Delete custom pricing (admin)
 
 ### Payments
