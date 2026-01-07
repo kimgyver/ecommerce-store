@@ -284,8 +284,6 @@ export default function B2BPricingPage() {
           )
         );
         showToast("Default discount saved successfully!");
-        // Reload data to ensure consistency
-        await loadData();
       } else {
         const error = await response.json();
         showToast(`Failed to save: ${error.error || "Unknown error"}`, "error");
