@@ -7,8 +7,21 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("🚀 Setting up B2B test data...\n");
 
-  // 1. Create a distributor account
-  console.log("1️⃣ Creating distributor account...");
+  // 1. Ensure distributor company exists
+  console.log("1️⃣ Creating/finding distributor company...");
+  const distributorCompany = await prisma.distributor.upsert({
+    where: { emailDomain: "test.com" },
+    update: {},
+    create: {
+      name: "Test Corp",
+      emailDomain: "test.com",
+      defaultDiscountPercent: 15
+    }
+  });
+  console.log(`✅ Distributor company: ${distributorCompany.name}\n`);
+
+  // 2. Create a distributor user
+  console.log("2️⃣ Creating distributor user...");
   const hashedPassword = await bcrypt.hash("distributor123", 10);
 
   const distributor = await prisma.user.upsert({
@@ -19,18 +32,16 @@ async function main() {
       name: "Test Distributor",
       password: hashedPassword,
       role: "distributor",
-      companyName: "Chromet Inc.",
+      distributorId: distributorCompany.id,
       phone: "555-0100",
       address: "123 Business St"
     }
   });
-  console.log(
-    `✅ Distributor created: ${distributor.email} (${distributor.companyName})`
-  );
+  console.log(`✅ Distributor user created: ${distributor.email}`);
   console.log(`   Login: distributor@test.com / distributor123\n`);
 
-  // 2. Get first 3 products
-  console.log("2️⃣ Getting products...");
+  // 3. Get first 3 products
+  console.log("3️⃣ Getting products...");
   const products = await prisma.product.findMany({
     take: 3,
     orderBy: { createdAt: "asc" }
@@ -43,8 +54,8 @@ async function main() {
 
   console.log(`✅ Found ${products.length} products\n`);
 
-  // 3. Set up B2B pricing for each product
-  console.log("3️⃣ Setting up B2B pricing...\n");
+  // 4. Set up B2B pricing for each product
+  console.log("4️⃣ Setting up B2B pricing...\n");
 
   for (const product of products) {
     const basePrice = product.price;
@@ -61,7 +72,7 @@ async function main() {
       where: {
         productId_distributorId: {
           productId: product.id,
-          distributorId: distributor.id
+          distributorId: distributorCompany.id
         }
       },
       update: {
@@ -70,7 +81,7 @@ async function main() {
       },
       create: {
         productId: product.id,
-        distributorId: distributor.id,
+        distributorId: distributorCompany.id,
         customPrice: b2bPrice,
         discountTiers: discountTiers as any
       }

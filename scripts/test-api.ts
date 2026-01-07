@@ -11,13 +11,20 @@ async function testAPI() {
         id: true,
         email: true,
         name: true,
-        companyName: true,
         phone: true,
         createdAt: true,
-        defaultDiscountPercent: true,
-        _count: {
+        distributorId: true,
+        distributor: {
           select: {
-            distributorPrices: true
+            id: true,
+            name: true,
+            emailDomain: true,
+            defaultDiscountPercent: true,
+            _count: {
+              select: {
+                distributorPrices: true
+              }
+            }
           }
         }
       },

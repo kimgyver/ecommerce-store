@@ -10,9 +10,16 @@ async function checkDistributors() {
         id: true,
         email: true,
         name: true,
-        companyName: true,
         role: true,
-        defaultDiscountPercent: true
+        distributorId: true,
+        distributor: {
+          select: {
+            id: true,
+            name: true,
+            emailDomain: true,
+            defaultDiscountPercent: true
+          }
+        }
       }
     });
 
