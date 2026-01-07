@@ -1,6 +1,6 @@
 interface StarRatingProps {
-  rating: number;
-  reviewCount?: number;
+  rating: number | null | undefined;
+  reviewCount?: number | null;
   size?: "sm" | "md" | "lg";
 }
 
@@ -21,14 +21,16 @@ export function StarRating({
     lg: "text-base"
   };
 
+  const displayRating = rating ?? 0;
+
   return (
     <div className="flex items-center gap-1">
       <div className="flex items-center">
         {[1, 2, 3, 4, 5].map(star => {
           const fill =
-            star <= Math.floor(rating)
+            star <= Math.floor(displayRating)
               ? "fill-yellow-400"
-              : star - 0.5 <= rating
+              : star - 0.5 <= displayRating
               ? "fill-yellow-400"
               : "fill-gray-200";
 
@@ -49,9 +51,9 @@ export function StarRating({
         })}
       </div>
       <span className={`${textSizeClasses[size]} text-gray-600 font-medium`}>
-        {rating.toFixed(1)}
+        {displayRating.toFixed(1)}
       </span>
-      {reviewCount !== undefined && (
+      {reviewCount !== undefined && reviewCount !== null && (
         <span className={`${textSizeClasses[size]} text-gray-500`}>
           ({reviewCount})
         </span>
