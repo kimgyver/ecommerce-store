@@ -25,9 +25,9 @@ model User {
   // User role: customer (B2C), distributor (B2B), admin
   role          String    @default("customer")
   
-  // B2B specific fields
-  companyName   String?
-  defaultDiscountPercent Float?  // Default discount % for all products (distributor only)
+  // B2B specific fields - link to Distributor company
+  distributorId String?
+  distributor   Distributor? @relation(fields: [distributorId], references: [id], onDelete: SetNull)
 
   // Default shipping address info
   defaultRecipientName      String?
@@ -40,11 +40,27 @@ model User {
   orders        Order[]
   wishlist      Wishlist[]
   reviews       Review[]
-  distributorPrices DistributorPrice[]
-  categoryDiscounts CategoryDiscount[]
 
   // Always use profile shipping address if true
   alwaysUseProfileShipping Boolean @default(false)
+  
+  @@index([distributorId])
+}
+
+// Distributor company model
+model Distributor {
+  id              String   @id @default(cuid())
+  name            String   // Company name (e.g., "Chromet Inc.")
+  emailDomain     String   @unique // Email domain for auto-detection (e.g., "chromet.com")
+  logoUrl         String?  // Company logo
+  brandColor      String?  // Brand color for white-label
+  defaultDiscountPercent Float? // Default discount % for all products (fallback)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  users           User[]   // Employees of this distributor
+  distributorPrices DistributorPrice[] // Custom pricing for this distributor
+  categoryDiscounts CategoryDiscount[] // Category-level discounts
 }
 
 model Product {
@@ -173,15 +189,15 @@ model CartItem {
 
 // B2B Distributor pricing model
 model DistributorPrice {
-  id              String   @id @default(cuid())
+  id              String      @id @default(cuid())
   productId       String
-  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product         Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
   distributorId   String
-  distributor     User     @relation(fields: [distributorId], references: [id], onDelete: Cascade)
-  customPrice     Float    // Base B2B price for this distributor
-  discountTiers   Json?    // Quantity-based discount tiers: [{ minQty: 1, maxQty: 10, price: 80 }, ...]
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  distributor     Distributor @relation(fields: [distributorId], references: [id], onDelete: Cascade)
+  customPrice     Float       // Base B2B price for this distributor
+  discountTiers   Json?       // Quantity-based discount tiers: [{ minQty: 1, maxQty: 10, price: 80 }, ...]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
   
   @@unique([productId, distributorId])
   @@index([productId])
@@ -190,13 +206,13 @@ model DistributorPrice {
 
 // B2B Category-level discount for distributors
 model CategoryDiscount {
-  id                String   @id @default(cuid())
+  id                String      @id @default(cuid())
   distributorId     String
-  distributor       User     @relation(fields: [distributorId], references: [id], onDelete: Cascade)
-  category          String   // Product category (e.g., "Electronics", "Computers")
-  discountPercent   Float    // Discount percentage for this category
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  distributor       Distributor @relation(fields: [distributorId], references: [id], onDelete: Cascade)
+  category          String      // Product category (e.g., "Electronics", "Computers")
+  discountPercent   Float       // Discount percentage for this category
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
   
   @@unique([distributorId, category])
   @@index([distributorId])

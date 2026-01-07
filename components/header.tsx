@@ -93,7 +93,17 @@ function UserDropdown({ session, isActive, pathname }: UserDropdownProps) {
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-700 transition text-sm"
       >
-        <span>{session.user?.name}</span>
+        <div className="flex flex-col items-end">
+          <span className="font-medium">{session.user?.name}</span>
+          {session.user?.distributor && (
+            <span className="text-xs text-blue-400">
+              {session.user.distributor.name}
+            </span>
+          )}
+          {session.user?.role === "customer" && (
+            <span className="text-xs text-gray-400">Customer</span>
+          )}
+        </div>
         <div className={`transition-transform ${isOpen ? "rotate-180" : ""}`}>
           {Icons.chevron}
         </div>

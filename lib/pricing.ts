@@ -37,14 +37,22 @@ export async function getProductPrice(
     return product.price;
   }
 
-  // Get user role and default discount
+  // Get user role and distributor info
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { role: true, defaultDiscountPercent: true }
+    select: {
+      role: true,
+      distributorId: true,
+      distributor: {
+        select: {
+          defaultDiscountPercent: true
+        }
+      }
+    }
   });
 
   console.log(
-    `[Pricing] User role: ${user?.role}, defaultDiscountPercent: ${user?.defaultDiscountPercent}`
+    `[Pricing] User role: ${user?.role}, distributorId: ${user?.distributorId}, defaultDiscountPercent: ${user?.distributor?.defaultDiscountPercent}`
   );
 
   if (!user || user.role === "customer") {
@@ -53,12 +61,12 @@ export async function getProductPrice(
   }
 
   // For distributors, check for custom pricing
-  if (user.role === "distributor") {
+  if (user.role === "distributor" && user.distributorId) {
     const distributorPrice = await prisma.distributorPrice.findUnique({
       where: {
         productId_distributorId: {
           productId,
-          distributorId: userId
+          distributorId: user.distributorId
         }
       }
     });
@@ -70,7 +78,7 @@ export async function getProductPrice(
       const categoryDiscount = await prisma.categoryDiscount.findUnique({
         where: {
           distributorId_category: {
-            distributorId: userId,
+            distributorId: user.distributorId,
             category: product.category
           }
         }
@@ -88,11 +96,14 @@ export async function getProductPrice(
       }
 
       // No category discount, check for default discount
-      if (user.defaultDiscountPercent && user.defaultDiscountPercent > 0) {
+      if (
+        user.distributor?.defaultDiscountPercent &&
+        user.distributor.defaultDiscountPercent > 0
+      ) {
         const discountedPrice =
-          product.price * (1 - user.defaultDiscountPercent / 100);
+          product.price * (1 - user.distributor.defaultDiscountPercent / 100);
         console.log(
-          `[Pricing] Applying default discount ${user.defaultDiscountPercent}%: ${discountedPrice}`
+          `[Pricing] Applying default discount ${user.distributor.defaultDiscountPercent}%: ${discountedPrice}`
         );
         return discountedPrice;
       }

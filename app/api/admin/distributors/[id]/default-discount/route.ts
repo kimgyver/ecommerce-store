@@ -43,12 +43,12 @@ export async function PUT(
     }
 
     // Verify distributor exists
-    const distributor = await prisma.user.findUnique({
+    const distributor = await prisma.distributor.findUnique({
       where: { id: distributorId },
-      select: { role: true }
+      select: { id: true }
     });
 
-    if (!distributor || distributor.role !== "distributor") {
+    if (!distributor) {
       return NextResponse.json(
         { error: "Distributor not found" },
         { status: 404 }
@@ -56,14 +56,13 @@ export async function PUT(
     }
 
     // Update default discount
-    const updatedDistributor = await prisma.user.update({
+    const updatedDistributor = await prisma.distributor.update({
       where: { id: distributorId },
       data: { defaultDiscountPercent },
       select: {
         id: true,
-        email: true,
         name: true,
-        companyName: true,
+        emailDomain: true,
         defaultDiscountPercent: true
       }
     });

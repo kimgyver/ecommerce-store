@@ -37,12 +37,29 @@ export async function POST(request: Request) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Extract email domain for distributor auto-detection
+    const emailDomain = email.split("@")[1];
+
+    // Check if this domain belongs to a distributor
+    const distributor = await prisma.distributor.findUnique({
+      where: { emailDomain }
+    });
+
+    // Determine role and distributor association
+    const role = distributor ? "distributor" : "customer";
+    const distributorId = distributor?.id || null;
+
     // Create user
     const user = await prisma.user.create({
       data: {
         email,
         name,
-        password: hashedPassword
+        password: hashedPassword,
+        role,
+        distributorId
+      },
+      include: {
+        distributor: true
       }
     });
 
@@ -52,7 +69,14 @@ export async function POST(request: Request) {
         user: {
           id: user.id,
           email: user.email,
-          name: user.name
+          name: user.name,
+          role: user.role,
+          distributor: user.distributor
+            ? {
+                id: user.distributor.id,
+                name: user.distributor.name
+              }
+            : null
         }
       },
       { status: 201 }

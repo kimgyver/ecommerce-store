@@ -73,6 +73,27 @@ const sampleProducts = [
   }
 ];
 
+const sampleDistributors = [
+  {
+    name: "Chromet Inc.",
+    emailDomain: "chromet.com",
+    logoUrl: null,
+    brandColor: "#FF6B35"
+  },
+  {
+    name: "ABC Distribution Co.",
+    emailDomain: "abcdist.com",
+    logoUrl: null,
+    brandColor: "#004E89"
+  },
+  {
+    name: "Premium Partners Ltd.",
+    emailDomain: "premiumpartners.com",
+    logoUrl: null,
+    brandColor: "#7209B7"
+  }
+];
+
 const sampleUsers = [
   {
     email: "admin@test.com",
@@ -81,20 +102,16 @@ const sampleUsers = [
     role: "admin"
   },
   {
-    email: "distributor@test.com",
+    email: "john@chromet.com", // Will auto-detect as Chromet distributor
     password: "dist123",
-    name: "Test Distributor",
-    role: "distributor",
-    companyName: "ABC Distribution Co.",
-    defaultDiscountPercent: 15
+    name: "John from Chromet",
+    role: "distributor"
   },
   {
-    email: "distributor2@test.com",
+    email: "sarah@abcdist.com", // Will auto-detect as ABC Distribution
     password: "dist123",
-    name: "Premium Distributor",
-    role: "distributor",
-    companyName: "Premium Partners Ltd.",
-    defaultDiscountPercent: 20
+    name: "Sarah from ABC",
+    role: "distributor"
   },
   {
     email: "customer@test.com",
@@ -109,7 +126,21 @@ async function main() {
 
   // Delete existing data
   await prisma.product.deleteMany();
-  console.log("✓ Cleared existing products");
+  await prisma.distributor.deleteMany();
+  console.log("✓ Cleared existing products and distributors");
+
+  // Create sample distributors
+  console.log("Creating distributors...");
+  const createdDistributors = [];
+  for (const distData of sampleDistributors) {
+    const distributor = await prisma.distributor.create({
+      data: distData
+    });
+    createdDistributors.push(distributor);
+    console.log(
+      `✓ Created distributor: ${distributor.name} (${distributor.emailDomain})`
+    );
+  }
 
   // Create sample users
   console.log("Creating users...");
@@ -118,18 +149,33 @@ async function main() {
     const hashedPassword = await bcrypt.hash(userData.password, 10);
     const { password, ...userDataWithoutPassword } = userData;
 
+    // Auto-detect distributor from email domain
+    const emailDomain = userData.email.split("@")[1];
+    const distributor = createdDistributors.find(
+      d => d.emailDomain === emailDomain
+    );
+
     const user = await prisma.user.upsert({
       where: { email: userData.email },
       update: {
-        ...userDataWithoutPassword
+        ...userDataWithoutPassword,
+        distributorId: distributor?.id || null
       },
       create: {
         ...userDataWithoutPassword,
-        password: hashedPassword
+        password: hashedPassword,
+        distributorId: distributor?.id || null
+      },
+      include: {
+        distributor: true
       }
     });
     createdUsers.push(user);
-    console.log(`✓ Created/Updated user: ${user.email} (${user.role})`);
+    console.log(
+      `✓ Created/Updated user: ${user.email} (${user.role}${
+        user.distributor ? ` - ${user.distributor.name}` : ""
+      })`
+    );
   }
 
   // Add sample products
@@ -240,6 +286,75 @@ async function main() {
       `✓ Created ${numReviews} reviews for ${product.name} (avg rating: ${
         Math.round(avgRating * 10) / 10
       }, displaying as ${targetReviewCount} reviews)`
+    );
+  }
+
+  // Create distributor pricing
+  console.log("Creating distributor pricing...");
+  const chrometDistributor = createdDistributors.find(
+    d => d.name === "Chromet Inc."
+  );
+  const abcDistributor = createdDistributors.find(
+    d => d.name === "ABC Distribution Co."
+  );
+
+  if (chrometDistributor) {
+    for (const { product } of createdProducts) {
+      // Chromet gets 20% off
+      const discountedPrice = Math.round(product.price * 0.8 * 100) / 100;
+
+      await prisma.distributorPrice.create({
+        data: {
+          productId: product.id,
+          distributorId: chrometDistributor.id,
+          customPrice: discountedPrice,
+          discountTiers: [
+            { minQty: 1, maxQty: 10, price: discountedPrice },
+            {
+              minQty: 11,
+              maxQty: 50,
+              price: Math.round(product.price * 0.75 * 100) / 100
+            },
+            {
+              minQty: 51,
+              maxQty: null,
+              price: Math.round(product.price * 0.7 * 100) / 100
+            }
+          ]
+        }
+      });
+    }
+    console.log(`✓ Created pricing for Chromet Inc. (20% base discount)`);
+  }
+
+  if (abcDistributor) {
+    for (const { product } of createdProducts) {
+      // ABC gets 15% off
+      const discountedPrice = Math.round(product.price * 0.85 * 100) / 100;
+
+      await prisma.distributorPrice.create({
+        data: {
+          productId: product.id,
+          distributorId: abcDistributor.id,
+          customPrice: discountedPrice,
+          discountTiers: [
+            { minQty: 1, maxQty: 10, price: discountedPrice },
+            {
+              minQty: 11,
+              maxQty: 50,
+              price: Math.round(product.price * 0.8 * 100) / 100
+            },
+            {
+              minQty: 51,
+              maxQty: null,
+              price: Math.round(product.price * 0.75 * 100) / 100
+            }
+          ]
+        }
+      });
+    }
+    console.log(
+      `✓ Created pricing for ABC Distribution Co. (15% base discount)`
     );
   }
 

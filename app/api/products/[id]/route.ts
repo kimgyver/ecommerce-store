@@ -44,15 +44,15 @@ export async function GET(
     if (userId) {
       const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { role: true }
+        select: { role: true, distributorId: true }
       });
 
-      if (user?.role === "distributor") {
+      if (user?.role === "distributor" && user.distributorId) {
         const distributorPrice = await prisma.distributorPrice.findUnique({
           where: {
             productId_distributorId: {
               productId,
-              distributorId: userId
+              distributorId: user.distributorId
             }
           },
           select: {

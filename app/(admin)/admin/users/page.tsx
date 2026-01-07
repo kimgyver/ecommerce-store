@@ -7,12 +7,15 @@ interface User {
   email: string;
   name: string | null;
   role: string;
-  companyName: string | null;
   phone: string | null;
   createdAt: string;
+  distributor: {
+    id: string;
+    name: string;
+    emailDomain: string;
+  } | null;
   _count: {
     orders: number;
-    distributorPrices: number;
   };
 }
 
@@ -41,7 +44,6 @@ export default function UsersPage() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editForm, setEditForm] = useState({
     name: "",
-    companyName: "",
     role: ""
   });
 
@@ -71,14 +73,13 @@ export default function UsersPage() {
     setEditingUser(user);
     setEditForm({
       name: user.name || "",
-      companyName: user.companyName || "",
       role: user.role
     });
   };
 
   const closeEditModal = () => {
     setEditingUser(null);
-    setEditForm({ name: "", companyName: "", role: "" });
+    setEditForm({ name: "", role: "" });
   };
 
   const handleSaveEdit = async () => {
@@ -90,7 +91,6 @@ export default function UsersPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: editForm.name,
-          companyName: editForm.companyName,
           role: editForm.role
         })
       });
@@ -118,7 +118,7 @@ export default function UsersPage() {
       searchQuery === "" ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.companyName?.toLowerCase().includes(searchQuery.toLowerCase());
+      user.distributor?.name.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesRole && matchesSearch;
   });
 
@@ -226,9 +226,6 @@ export default function UsersPage() {
                     Orders
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    B2B Prices
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Joined
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -250,7 +247,7 @@ export default function UsersPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {user.companyName || "-"}
+                      {user.distributor?.name || "-"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
@@ -263,9 +260,6 @@ export default function UsersPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {user._count.orders}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {user._count.distributorPrices}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {new Date(user.createdAt).toLocaleDateString()}
@@ -317,21 +311,6 @@ export default function UsersPage() {
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter name"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Company Name
-                </label>
-                <input
-                  type="text"
-                  value={editForm.companyName}
-                  onChange={e =>
-                    setEditForm({ ...editForm, companyName: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter company name"
                 />
               </div>
 

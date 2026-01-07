@@ -32,13 +32,12 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { role, name, companyName } = body;
+    const { role, name } = body;
 
     // Build update data
     const updateData: {
       role?: string;
       name?: string;
-      companyName?: string;
     } = {};
 
     if (role !== undefined) {
@@ -53,10 +52,6 @@ export async function PATCH(
       updateData.name = name;
     }
 
-    if (companyName !== undefined) {
-      updateData.companyName = companyName;
-    }
-
     // Update user
     const updatedUser = await prisma.user.update({
       where: { id },
@@ -66,7 +61,13 @@ export async function PATCH(
         email: true,
         name: true,
         role: true,
-        companyName: true
+        distributor: {
+          select: {
+            id: true,
+            name: true,
+            emailDomain: true
+          }
+        }
       }
     });
 

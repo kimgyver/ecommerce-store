@@ -70,7 +70,10 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8">
-        <h1 className="text-2xl font-bold text-center mb-6">Sign Up</h1>
+        <h1 className="text-2xl font-bold text-center mb-2">Sign Up</h1>
+        <p className="text-center text-sm text-gray-600 mb-6">
+          Create your account to start shopping
+        </p>
 
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
@@ -105,6 +108,9 @@ export default function RegisterPage() {
               placeholder="your@email.com"
               required
             />
+            <p className="text-xs text-gray-500 mt-1">
+              💡 Use your company email for B2B pricing (e.g., @chromet.com)
+            </p>
           </div>
 
           <div>
@@ -140,7 +146,7 @@ export default function RegisterPage() {
             disabled={isLoading}
             className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold hover:bg-blue-700 transition disabled:bg-gray-400"
           >
-            {isLoading ? "Signing up..." : "Sign Up"}
+            {isLoading ? "Creating account..." : "Sign Up"}
           </button>
         </form>
 

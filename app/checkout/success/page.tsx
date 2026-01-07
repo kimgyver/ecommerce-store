@@ -60,7 +60,7 @@ function CheckoutSuccessContent() {
           // Clear cart context after successful order
           try {
             await clearCart();
-            // 비회원 장바구니도 비움
+            // Clear guest cart as well
             localStorage.removeItem("guest_cart");
           } catch (error) {
             console.error("Failed to clear cart context:", error);

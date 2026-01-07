@@ -27,8 +27,8 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     try {
       const response = await fetch("/api/wishlist");
       if (response.ok) {
-        const items = await response.json();
-        setWishlistIds(new Set(items.map((item: any) => item.productId)));
+        const items: Array<{ productId: string }> = await response.json();
+        setWishlistIds(new Set(items.map(item => item.productId)));
       }
     } catch (error) {
       console.error("Failed to load wishlist:", error);

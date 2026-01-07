@@ -52,7 +52,7 @@ export default function PaymentForm({
         return;
       }
 
-      // 결제 성공 상태 확인
+      // Check payment success status
       if (
         paymentIntent &&
         (paymentIntent.status === "succeeded" ||
@@ -60,7 +60,7 @@ export default function PaymentForm({
       ) {
         setIsSuccess(true);
         onSuccess();
-        return; // 결제 성공 시 아래 에러 처리 방지
+        return; // Prevent error handling below on payment success
       }
       setErrorMessage(
         `Payment not completed. Status: ${paymentIntent?.status || "unknown"}`

@@ -47,9 +47,8 @@ export async function GET(
         distributor: {
           select: {
             id: true,
-            email: true,
             name: true,
-            companyName: true
+            emailDomain: true
           }
         }
       }
@@ -68,13 +67,12 @@ export async function GET(
         }
       });
 
-      const distributor = await prisma.user.findUnique({
+      const distributor = await prisma.distributor.findUnique({
         where: { id: distributorId },
         select: {
           id: true,
-          email: true,
           name: true,
-          companyName: true
+          emailDomain: true
         }
       });
 

@@ -38,6 +38,13 @@ export default function ProfilePage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  // Debug: Log session data
+  useEffect(() => {
+    if (session) {
+      console.log("Session data:", JSON.stringify(session, null, 2));
+    }
+  }, [session]);
+
   // Form state
   const [formData, setFormData] = useState({
     name: "",
@@ -218,6 +225,44 @@ export default function ProfilePage() {
         <div className="mb-6">
           <h1 className="text-3xl font-bold">Profile</h1>
           <p className="text-gray-600 mt-2">Hello, {user?.name}!</p>
+
+          {/* Display user role and company info */}
+          {session?.user?.role && (
+            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700">
+                  Account Type:
+                </span>
+                <span className="text-sm font-semibold text-blue-600">
+                  {session.user.role === "distributor"
+                    ? "Distributor"
+                    : session.user.role === "admin"
+                    ? "Administrator"
+                    : "Customer"}
+                </span>
+              </div>
+              {session.user.distributor && (
+                <div className="mt-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-700">
+                      Company:
+                    </span>
+                    <span className="text-sm font-semibold text-blue-600">
+                      {session.user.distributor.name}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-sm font-medium text-gray-700">
+                      Domain:
+                    </span>
+                    <span className="text-sm text-gray-600">
+                      @{session.user.distributor.emailDomain}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {error && (

@@ -167,7 +167,7 @@ export async function GET() {
       orderBy: { createdAt: "desc" }
     });
 
-    // 배송지 정보를 shipping 객체로 매핑해서 반환
+    // Map shipping address information to shipping object
     const ordersWithShipping = orders.map(order => ({
       ...order,
       shipping: {

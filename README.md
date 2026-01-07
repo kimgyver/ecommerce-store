@@ -20,6 +20,7 @@ A modern, full-stack e-commerce platform built with Next.js 16, React 19, and Po
 - **Product Management** - Browse, search, and filter products by category
 - **Shopping Cart** - Add/remove items with optimistic updates and real-time stock validation
 - **User Authentication** - Register, login, and profile management with JWT sessions
+- **Auto-Detection System** - Automatic B2B customer identification by email domain (e.g., @chromet.com → Chromet Inc.)
 - **Role-Based Pricing** - B2C (customer) vs B2B (distributor) pricing with automatic application
 - **Tiered Volume Discounts** - Quantity-based pricing tiers for B2B customers
 - **Order Management** - View order history with detailed status tracking and original price comparison
@@ -29,12 +30,13 @@ A modern, full-stack e-commerce platform built with Next.js 16, React 19, and Po
 ### Admin Dashboard
 
 - **Product CRUD** - Create, read, update, delete products with image uploads
+- **Distributor Management** - Add, edit, delete B2B companies with email domain auto-detection
 - **B2B Pricing Management** - Three-tier discount system:
   - **Default Discount** - Global percentage discount per distributor (simplest, applies to all products)
   - **Category Discounts** - Percentage discounts per product category (overrides default)
   - **Product-Specific Pricing** - Custom prices and quantity-based discount tiers (highest priority, overrides category and default)
 - **Order Management** - View and update order statuses in real-time
-- **User Management** - View and manage customer and distributor accounts
+- **User Management** - View and manage customer and distributor accounts with company affiliations
 - **Statistics Dashboard** - View sales metrics and analytics
 - **Responsive Admin Layout** - Collapsible sidebar with proper navigation
 
@@ -78,7 +80,8 @@ A modern, full-stack e-commerce platform built with Next.js 16, React 19, and Po
 
 ### Core Models
 
-- **User** - Authentication, profile management, role-based access (customer/distributor/admin), and defaultDiscountPercent field
+- **User** - Authentication, profile management, role-based access (customer/distributor/admin), linked to Distributor via `distributorId`
+- **Distributor** - B2B company information with email domain, branding, and default discount percentage
 - **Product** - Product catalog with inventory tracking
 - **Order** - Order management with payment intent tracking
 - **OrderItem** - Line items with price and basePrice for discount tracking
@@ -121,13 +124,21 @@ A modern, full-stack e-commerce platform built with Next.js 16, React 19, and Po
 - Role-based access control (customer, distributor, admin)
 - Protected routes for admin and checkout
 - Session persistence across requests
-- Automatic logout on session expiration
 
 ### B2B Pricing System
+
+- **Auto-Detection by Email Domain**:
+
+  - User registers with company email (e.g., john@chromet.com)
+  - System checks `Distributor.emailDomain` for match
+  - User automatically assigned `role: "distributor"` and linked to company
+  - No manual company selection needed during registration
 
 - **Role-Based Pricing**:
 
   - Customers see standard B2C prices
+  - Distributors see custom B2B prices with automatic discounts
+  - Admin can configure pricing per distributor using a three-tier system
   - Distributors see custom B2B prices with automatic discounts
   - Admin can configure pricing per distributor using a three-tier system
 
@@ -265,46 +276,47 @@ npm run dev
 
 ## Application Access
 
-### End User Access (Customer)
+2. **User Registration**
 
-1. **Browse Products**
-
-   - Visit [http://localhost:3000](http://localhost:3000)
+   - Click "Register" in the top navigation
+   - Fill in email and password
+   - **B2B Auto-Detection**: If email domain matches a registered distributor (e.g., @chromet.com), user automatically becomes a distributor
+   - Account created and ready to use with appropriate pricingtp://localhost:3000)
    - Click "Products" in the navigation
    - Browse all products or filter by category
 
-2. **User Registration**
+3. **User Registration**
 
    - Click "Register" in the top navigation
    - Fill in email and password
    - Account created and ready to use
 
-3. **User Login**
+4. **User Login**
 
    - Click "Login" in the top navigation
    - Enter email and password
    - Redirected to homepage after successful login
 
-4. **Shopping**
+5. **Shopping**
 
    - Add products to cart
    - View cart: Click cart icon in header
    - Proceed to checkout
    - Complete payment via Stripe
 
-5. **Order History**
+6. **Order History**
 
    - After login, click "Orders" in navigation
    - View all past orders with status
    - Click order to see details
 
-6. **User Profile**
+7. **User Profile**
 
    - Click "Profile" in navigation
    - View account information
    - Change password if needed
 
-7. **Product Reviews**
+8. **Product Reviews**
    - Go to any product detail page
    - Scroll to "Customer Reviews" section
    - Click "Write Review" button (requires login)
@@ -330,15 +342,40 @@ npm run dev
    - **Add Product**: Click "Add Product" button
      - Fill in name, description, price, stock
      - Upload product image
-     - Select category
-     - Click "Create Product"
-   - **Edit Product**: Click edit icon next to product
-     - Update any field
-     - Change or update image
-     - Click "Update Product"
+
+4. **Distributor Management**
+
+   - Go to `Admin > B2B Pricing`
+   - **Add New Distributor**:
+
+     - Click "Add New Distributor" button
+     - Enter company name (e.g., "Chromet Inc.")
+     - Enter email domain for auto-detection (e.g., "chromet.com")
+     - Optionally add logo URL and brand color
+     - Optionally set initial default discount %
+     - Click "Create Distributor"
+
+   - **Edit Distributor**:
+
+     - Click "Edit" button next to any distributor
+     - Update company name, email domain, logo, or brand color
+     - Click "Save" to apply changes
+
+   - **Delete Distributor**:
+     - Click "Delete" button next to distributor
+     - System prevents deletion if employees exist
+     - Confirm deletion
+
+5. **B2B Pricing Management**
+
+   - Go to `Admin > B2B Pricing`
+   - **Select Distributor**: Choose a distributor from the sidebar
+
+     - View summary: Default discount %, category discount count, custom price count
+
    - **Delete Product**: Click delete icon, confirm deletion
 
-4. **B2B Pricing Management**
+6. **B2B Pricing Management**
 
    - Go to `Admin > B2B Pricing`
    - **Select Distributor**: Choose a distributor from the sidebar
@@ -347,8 +384,10 @@ npm run dev
 
    - **Set Default Discount** (Blue Section)
 
-     - Enter a global percentage discount (0-100%) for the distributor
-     - Example: 15% means all products are 15% off by default
+7. **Order Management**
+
+   - Go to `Admin > Orders`ll products are 15% off by default
+
      - This is the easiest way to manage pricing for 100s or 1000s of products
      - Click "Save" to apply
 
@@ -363,13 +402,17 @@ npm run dev
 
    - **Set Product-Specific Pricing** (White Section)
 
-     - Click "Set Price" or "Edit" next to any product
-     - Enter custom base price for distributor
-     - Optionally add quantity-based discount tiers:
-       - Min Qty, Max Qty (leave empty for unlimited), Price
-       - Example: 1-10 → $54, 11-50 → $49, 51+ → $44
-     - Overrides both category discounts and default discount
-     - Click "Save Pricing"
+8. **User Management**
+
+   - Go to `Admin > Users`
+   - View all users with their roles (customer/distributor/admin)
+   - See company affiliation for distributor users
+   - Edit user name and role (company assignment is automatic via email domain)
+   - See registration dates and account details
+
+9. **Statistics & Analytics**y discounts and default discount
+
+   - Click "Save Pricing"
 
    - **Delete Pricing**: Remove custom pricing to fall back to category or default discount
 
@@ -377,29 +420,29 @@ npm run dev
      - Product-Specific Pricing > Category Discount > Default Discount > Base Price
      - Clear visual indicators show which discount level is active
 
-5. **Order Management**
+10. **Order Management**
 
-   - Go to `Admin > Orders`
-   - **View Orders**: See all orders with customer info
-   - **Filter by Status**: Use status dropdown to filter
-   - **Update Status**: Click status dropdown on order
-     - Options: pending, processing, shipped, delivered, cancelled
-     - Changes update in real-time
+    - Go to `Admin > Orders`
+    - **View Orders**: See all orders with customer info
+    - **Filter by Status**: Use status dropdown to filter
+    - **Update Status**: Click status dropdown on order
+      - Options: pending, processing, shipped, delivered, cancelled
+      - Changes update in real-time
 
-6. **User Management**
+11. **User Management**
 
-   - Go to `Admin > Users`
-   - View all users with their roles (customer/distributor/admin)
-   - See registration dates and account details
+    - Go to `Admin > Users`
+    - View all users with their roles (customer/distributor/admin)
+    - See registration dates and account details
 
-7. **Statistics & Analytics**
-   - Go to `Admin > Statistics`
-   - View key metrics:
-     - Total Revenue
-     - Total Orders
-     - Total Products
-     - Active Users
-   - View recent orders and top products
+12. **Statistics & Analytics**
+    - Go to `Admin > Statistics`
+    - View key metrics:
+      - Total Revenue
+      - Total Orders
+      - Total Products
+      - Active Users
+    - View recent orders and top products
 
 ### Database Management (Prisma Studio)
 
@@ -500,16 +543,24 @@ npm run dev
 
 - `GET /api/products` - List all products (with role-based pricing)
 - `GET /api/products/[id]` - Get product details (with tiered pricing info for distributors)
-- `POST /api/products` - Create product (admin)
-- `PUT /api/products/[id]` - Update product (admin)
-- `DELETE /api/products/[id]` - Delete product (admin)
 
-### Reviews
+### Distributors
 
-- `GET /api/reviews?productId=[id]` - Get product reviews with average rating and count
-- `POST /api/reviews` - Submit review (authenticated) - Auto-updates Product.rating and reviewCount
-- `PUT /api/reviews/[id]` - Update review (owner) - Recalculates Product.rating
-- `DELETE /api/reviews/[id]` - Delete review (owner) - Recalculates Product.rating and reviewCount
+- `GET /api/admin/distributors` - Get all distributors with pricing summary (admin)
+- `POST /api/admin/distributors` - Create new distributor company (admin)
+- `PUT /api/admin/distributors/[id]` - Update distributor info (admin)
+- `DELETE /api/admin/distributors/[id]` - Delete distributor (admin, prevents if employees exist)
+
+### B2B Pricing
+
+- `PUT /api/admin/distributors/[id]/default-discount` - Set default discount % for distributor (admin)
+- `GET /api/admin/distributors/[id]/category-discounts` - Get category discounts for distributor (admin)
+- `POST /api/admin/distributors/[id]/category-discounts` - Create/update category discount (admin)
+- `DELETE /api/admin/distributors/[id]/category-discounts` - Delete category discount (admin)
+- `GET /api/admin/b2b-pricing/[distributorId]` - Get product-specific pricing rules for distributor (admin)
+- `GET /api/admin/b2b-pricing/[distributorId]/[productId]` - Get specific product pricing (admin)
+- `POST /api/admin/b2b-pricing/[distributorId]/[productId]` - Create/update product-specific pricing (admin)
+- `DELETE /api/admin/b2b-pricing/[distributorId]/[productId]` - Delete custom pricing (admin)
 
 ### Orders
 
@@ -527,12 +578,22 @@ npm run dev
 
 ### B2B Pricing
 
-- `GET /api/admin/distributors` - Get all distributors with pricing summary (admin)
-- `PUT /api/admin/distributors/[id]/default-discount` - Set default discount % for distributor (admin)
-- `GET /api/admin/distributors/[id]/category-discounts` - Get category discounts for distributor (admin)
-- `POST /api/admin/distributors/[id]/category-discounts` - Create/update category discount (admin)
-- `DELETE /api/admin/distributors/[id]/category-discounts` - Delete category discount (admin)
-- `GET /api/admin/b2b-pricing/[distributorId]` - Get product-specific pricing rules for distributor (admin)
+### Distributor Management
+
+- **Add Distributor** - Create new B2B companies with email domain for auto-detection
+- **Edit Distributor** - Update company info, logo, brand colors
+- **Delete Distributor** - Remove companies (with employee safety check)
+- **View Summary** - See pricing stats per distributor
+
+### B2B Pricing Management
+
+- **Distributor Selection** - Dropdown to select distributor
+- **Default Discount** - Set global percentage discount for all products
+- **Category Discounts** - Configure discounts per product category
+- **Product Pricing List** - View all products with current B2B pricing
+- **Discount Tier Summary** - Visual overview of quantity-based pricing
+- **Set Custom Pricing** - Configure base price and multiple discount tiers
+- **Delete Pricing** - Remove custom pricing to revert to category/default discountfic pricing rules for distributor (admin)
 - `GET /api/admin/b2b-pricing/[distributorId]/[productId]` - Get specific product pricing (admin)
 - `POST /api/admin/b2b-pricing/[distributorId]/[productId]` - Create/update product-specific pricing (admin)
 - `DELETE /api/admin/b2b-pricing/[distributorId]/[productId]` - Delete custom pricing (admin)

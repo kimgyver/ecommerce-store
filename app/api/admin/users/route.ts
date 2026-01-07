@@ -35,13 +35,18 @@ export async function GET() {
         email: true,
         name: true,
         role: true,
-        companyName: true,
         phone: true,
         createdAt: true,
+        distributor: {
+          select: {
+            id: true,
+            name: true,
+            emailDomain: true
+          }
+        },
         _count: {
           select: {
-            orders: true,
-            distributorPrices: true
+            orders: true
           }
         }
       },
