@@ -4,6 +4,7 @@ import { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { AuthProvider } from "./auth-provider";
 import { CartProvider } from "@/lib/cart-context";
+import { WishlistProvider } from "@/lib/wishlist-context";
 import { Header } from "./header";
 
 export function Providers({ children }: { children: ReactNode }) {
@@ -15,8 +16,10 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <AuthProvider>
       <CartProvider>
-        {!isAdminPage && <Header />}
-        {children}
+        <WishlistProvider>
+          {!isAdminPage && <Header />}
+          {children}
+        </WishlistProvider>
       </CartProvider>
     </AuthProvider>
   );

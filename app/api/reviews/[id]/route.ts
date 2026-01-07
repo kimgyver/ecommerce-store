@@ -56,6 +56,23 @@ export async function PUT(
       }
     });
 
+    // Update product rating and reviewCount
+    const allReviews = await prisma.review.findMany({
+      where: { productId: review.productId },
+      select: { rating: true }
+    });
+
+    const avgRating =
+      allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length;
+
+    await prisma.product.update({
+      where: { id: review.productId },
+      data: {
+        rating: Math.round(avgRating * 10) / 10,
+        reviewCount: allReviews.length
+      }
+    });
+
     return NextResponse.json(updatedReview);
   } catch (error) {
     console.error("Error updating review:", error);
@@ -93,10 +110,41 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
+    // Save productId before deleting
+    const productId = review.productId;
+
     // Delete review
     await prisma.review.delete({
       where: { id: reviewId }
     });
+
+    // Update product rating and reviewCount
+    const allReviews = await prisma.review.findMany({
+      where: { productId },
+      select: { rating: true }
+    });
+
+    if (allReviews.length > 0) {
+      const avgRating =
+        allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length;
+
+      await prisma.product.update({
+        where: { id: productId },
+        data: {
+          rating: Math.round(avgRating * 10) / 10,
+          reviewCount: allReviews.length
+        }
+      });
+    } else {
+      // No reviews left, set to null
+      await prisma.product.update({
+        where: { id: productId },
+        data: {
+          rating: null,
+          reviewCount: null
+        }
+      });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

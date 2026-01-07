@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Toast } from "@/components/toast";
 
 interface Product {
   id: string;
+  sku: string;
   name: string;
   price: number;
   stock: number;
@@ -33,6 +35,20 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [stockFilter, setStockFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("name-asc");
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
+
+  const showToast = (
+    message: string,
+    type: "success" | "error" = "success"
+  ) => {
+    setToast({ message, type });
+  };
 
   useEffect(() => {
     // 타이틀 변경
@@ -58,11 +74,53 @@ export default function ProductsPage() {
     }
   };
 
-  const filteredProducts = products.filter(
-    product =>
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.category.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredProducts = products
+    .filter(product => {
+      // Search filter
+      const matchesSearch =
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.sku.toLowerCase().includes(searchTerm.toLowerCase());
+
+      // Category filter
+      const matchesCategory =
+        categoryFilter === "all" || product.category === categoryFilter;
+
+      // Stock filter
+      let matchesStock = true;
+      if (stockFilter === "in-stock") {
+        matchesStock = product.stock > 5;
+      } else if (stockFilter === "low-stock") {
+        matchesStock = product.stock >= 1 && product.stock <= 5;
+      } else if (stockFilter === "out-of-stock") {
+        matchesStock = product.stock === 0;
+      }
+
+      return matchesSearch && matchesCategory && matchesStock;
+    })
+    .sort((a, b) => {
+      // Sorting
+      switch (sortBy) {
+        case "name-asc":
+          return a.name.localeCompare(b.name);
+        case "name-desc":
+          return b.name.localeCompare(a.name);
+        case "price-asc":
+          return a.price - b.price;
+        case "price-desc":
+          return b.price - a.price;
+        case "stock-asc":
+          return a.stock - b.stock;
+        case "stock-desc":
+          return b.stock - a.stock;
+        case "category-asc":
+          return a.category.localeCompare(b.category);
+        case "category-desc":
+          return b.category.localeCompare(a.category);
+        default:
+          return 0;
+      }
+    });
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this product?")) return;
@@ -74,18 +132,19 @@ export default function ProductsPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        alert(
-          `Failed to delete product: ${errorData.error || "Unknown error"}`
+        showToast(
+          `Failed to delete product: ${errorData.error || "Unknown error"}`,
+          "error"
         );
         return;
       }
 
       setProducts(products.filter(p => p.id !== id));
-      alert("Product deleted successfully");
+      showToast("Product deleted successfully");
       await fetchProducts(); // Refresh the list
     } catch (error) {
       console.error("Failed to delete product:", error);
-      alert("Failed to delete product");
+      showToast("Failed to delete product", "error");
     }
   };
 
@@ -105,11 +164,74 @@ export default function ProductsPage() {
       <div className="mb-6">
         <input
           type="text"
-          placeholder="Search products..."
+          placeholder="Search by name, category, or SKU..."
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
+      </div>
+
+      {/* Filters and Sort */}
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Category Filter */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Category
+          </label>
+          <select
+            value={categoryFilter}
+            onChange={e => setCategoryFilter(e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">All Categories</option>
+            <option value="Electronics">Electronics</option>
+            <option value="Computers">Computers</option>
+            <option value="Accessories">Accessories</option>
+          </select>
+        </div>
+
+        {/* Stock Filter */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Stock Status
+          </label>
+          <select
+            value={stockFilter}
+            onChange={e => setStockFilter(e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">All Stock Levels</option>
+            <option value="in-stock">In Stock (6+)</option>
+            <option value="low-stock">Low Stock (1-5)</option>
+            <option value="out-of-stock">Out of Stock</option>
+          </select>
+        </div>
+
+        {/* Sort */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Sort By
+          </label>
+          <select
+            value={sortBy}
+            onChange={e => setSortBy(e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="name-asc">Name (A-Z)</option>
+            <option value="name-desc">Name (Z-A)</option>
+            <option value="price-asc">Price (Low to High)</option>
+            <option value="price-desc">Price (High to Low)</option>
+            <option value="stock-asc">Stock (Low to High)</option>
+            <option value="stock-desc">Stock (High to Low)</option>
+            <option value="category-asc">Category (A-Z)</option>
+            <option value="category-desc">Category (Z-A)</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Results Count */}
+      <div className="mb-4 text-sm text-gray-600">
+        Showing {filteredProducts.length} of {products.length} products
       </div>
 
       {/* Products Table */}
@@ -126,6 +248,12 @@ export default function ProductsPage() {
           <table className="w-full">
             <thead className="bg-gray-50 border-b">
               <tr>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                  Image
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                  SKU
+                </th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
                   Name
                 </th>
@@ -146,6 +274,16 @@ export default function ProductsPage() {
             <tbody>
               {filteredProducts.map(product => (
                 <tr key={product.id} className="border-b hover:bg-gray-50">
+                  <td className="px-6 py-4">
+                    <img
+                      src={product.image}
+                      alt={product.name}
+                      className="w-12 h-12 object-cover rounded"
+                    />
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-600 font-mono">
+                    {product.sku}
+                  </td>
                   <td className="px-6 py-4 text-sm text-gray-900 font-medium">
                     {product.name}
                   </td>
@@ -158,9 +296,11 @@ export default function ProductsPage() {
                   <td className="px-6 py-4 text-sm">
                     <span
                       className={`px-3 py-1 rounded-full text-sm font-medium ${
-                        product.stock > 0
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
+                        product.stock === 0
+                          ? "bg-red-100 text-red-800"
+                          : product.stock <= 5
+                          ? "bg-orange-100 text-orange-800"
+                          : "bg-green-100 text-green-800"
                       }`}
                     >
                       {product.stock}
@@ -185,6 +325,15 @@ export default function ProductsPage() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
       )}
     </div>
   );

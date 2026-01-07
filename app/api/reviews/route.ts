@@ -96,6 +96,23 @@ export async function POST(request: Request) {
       }
     });
 
+    // Update product rating and reviewCount
+    const allReviews = await prisma.review.findMany({
+      where: { productId },
+      select: { rating: true }
+    });
+
+    const avgRating =
+      allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length;
+
+    await prisma.product.update({
+      where: { id: productId },
+      data: {
+        rating: Math.round(avgRating * 10) / 10, // Round to 1 decimal
+        reviewCount: allReviews.length
+      }
+    });
+
     return NextResponse.json(review, { status: 201 });
   } catch (error) {
     console.error("Error creating review:", error);

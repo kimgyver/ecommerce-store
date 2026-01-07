@@ -7,6 +7,7 @@ import { notFound, useParams } from "next/navigation";
 import type { Product } from "@/lib/products";
 import ReviewForm from "@/components/ReviewForm";
 import ReviewsList from "@/components/ReviewsList";
+import { StarRating } from "@/components/star-rating";
 
 interface DiscountTier {
   minQty: number;
@@ -70,7 +71,61 @@ export default function ProductDetailPage() {
   }, [id]);
 
   if (isLoading) {
-    return <div className="max-w-7xl mx-auto px-4 py-8">Loading...</div>;
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="grid md:grid-cols-2 gap-8">
+          {/* Image Skeleton */}
+          <div className="animate-pulse">
+            <div className="bg-gray-200 w-full aspect-square rounded-lg"></div>
+          </div>
+
+          {/* Product Info Skeleton */}
+          <div className="animate-pulse">
+            {/* Category */}
+            <div className="h-4 bg-gray-200 rounded w-1/4 mb-3"></div>
+
+            {/* Title */}
+            <div className="h-8 bg-gray-200 rounded w-3/4 mb-4"></div>
+
+            {/* Rating */}
+            <div className="h-5 bg-gray-200 rounded w-1/3 mb-6"></div>
+
+            {/* Price */}
+            <div className="h-10 bg-gray-200 rounded w-1/2 mb-6"></div>
+
+            {/* Stock status */}
+            <div className="h-6 bg-gray-200 rounded w-1/4 mb-6"></div>
+
+            {/* Description */}
+            <div className="space-y-2 mb-6">
+              <div className="h-4 bg-gray-200 rounded w-full"></div>
+              <div className="h-4 bg-gray-200 rounded w-full"></div>
+              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+            </div>
+
+            {/* Quantity selector */}
+            <div className="h-12 bg-gray-200 rounded w-1/2 mb-4"></div>
+
+            {/* Add to cart button */}
+            <div className="h-12 bg-gray-200 rounded w-full"></div>
+          </div>
+        </div>
+
+        {/* Related Products Skeleton */}
+        <div className="mt-16">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[1, 2, 3].map(n => (
+              <div key={n} className="animate-pulse">
+                <div className="bg-gray-200 aspect-square rounded-lg mb-4"></div>
+                <div className="h-5 bg-gray-200 rounded w-3/4 mb-2"></div>
+                <div className="h-6 bg-gray-200 rounded w-1/2"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!product) {
@@ -122,6 +177,18 @@ export default function ProductDetailPage() {
         <div>
           <p className="text-gray-500 text-sm">{product.category}</p>
           <h1 className="text-4xl font-bold mt-2">{product.name}</h1>
+
+          {/* Rating */}
+          {product.rating && (
+            <div className="mt-3">
+              <StarRating
+                rating={product.rating}
+                reviewCount={product.reviewCount}
+                size="lg"
+              />
+            </div>
+          )}
+
           <p className="text-gray-600 mt-4">{product.description}</p>
 
           <div className="mt-8 border-t border-b py-8">

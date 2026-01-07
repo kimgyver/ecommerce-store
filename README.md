@@ -6,7 +6,7 @@ A modern, full-stack e-commerce platform built with Next.js 16, React 19, and Po
 
 - **Frontend**: Next.js 16.1.0 with React 19 (App Router)
 - **Backend**: Next.js API Routes
-- **Database**: PostgreSQL with Prisma ORM v6.19.1
+- **Database**: PostgreSQL with Prisma ORM v6.19.1 (Neon Serverless PostgreSQL)
 - **Authentication**: NextAuth.js (JWT-based sessions)
 - **Payment**: Stripe integration with idempotent webhook handling
 - **Styling**: Tailwind CSS
@@ -49,6 +49,23 @@ A modern, full-stack e-commerce platform built with Next.js 16, React 19, and Po
 - **Related Products** - Automatic category-based product recommendations
 - **Toast Notifications** - Non-blocking auto-dismissing notifications (5s) for admin actions
 - **Instant Feedback** - Button loading states, success messages, and error handling
+
+### Product Discovery & Filtering
+
+- **Advanced Sorting** - 5 sort options: Name (A-Z/Z-A), Price (Low-High/High-Low), Rating (High-Low)
+- **Price Range Filter** - Min/max price inputs with real-time filtering
+- **Stock Status Filter** - Filter by All/In Stock (6+)/Low Stock (1-5)/Out of Stock (0)
+- **Category Filter** - Browse products by category
+- **Search** - Full-text product name search
+- **Active Filters Badge** - Shows count of active filters with clear all option
+- **URL State Persistence** - All filters/sorting saved in URL for bookmarking and sharing
+- **Pagination** - Configurable page sizes (6/12/24/48), smart page navigation
+- **Grid/List View Toggle** - Switch between compact grid and detailed list layouts
+- **Wishlist** - Save favorite products with heart button (persistent across sessions)
+- **Quick View Modal** - Preview product details without leaving the list page
+- **Loading Skeletons** - Smooth skeleton UI during data loading
+- **Star Ratings Display** - Visual 5-star rating with review count on all product cards
+- **Responsive Design** - Optimized layouts for mobile, tablet, and desktop
 
 ### Localization & Quality
 
@@ -168,17 +185,20 @@ A modern, full-stack e-commerce platform built with Next.js 16, React 19, and Po
 
 ## Review System
 
-- **Submit Reviews** - Authenticated users can rate (1-5 stars) and review products
-- **View Reviews** - Display average rating with star visualization and review list
-- **Manage Reviews** - Users can delete their own reviews
-- **Admin Control** - Future: Review management in admin dashboard
+- **Submit Reviews** - Authenticated users can rate (1-5 stars) and review products with title and detailed content
+- **Automatic Rating Calculation** - Product average rating and review count automatically updated on review create/update/delete
+- **View Reviews** - Display average rating with visual 5-star component and full review list (sorted newest first)
+- **Star Rating Display** - Shown on product cards, detail pages, and throughout the site
+- **Manage Reviews** - Users can edit or delete their own reviews
+- **Real-time Updates** - Product ratings instantly reflect new reviews across all pages
+- **Review Aggregation** - Cached rating/reviewCount in Product table for fast list queries
 
 ## Getting Started
 
 ### Prerequisites
 
 - Node.js 18+
-- PostgreSQL database
+- PostgreSQL database (local or Neon Serverless PostgreSQL)
 - Stripe account (for payments)
 
 ### Installation
@@ -203,6 +223,21 @@ cp .env.example .env.local
 ```
 
 4. Configure `.env.local`:
+
+**Option A: Using Neon Serverless PostgreSQL (Recommended)**
+
+```env
+# Get this from Neon Dashboard > Connection Details
+DATABASE_URL=postgresql://user:password@ep-xxx.region.aws.neon.tech/dbname?sslmode=require
+
+NEXTAUTH_SECRET=your-secret-key
+NEXTAUTH_URL=http://localhost:3000
+STRIPE_PUBLIC_KEY=pk_test_...
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+```
+
+**Option B: Using Local PostgreSQL**
 
 ```env
 DATABASE_URL=postgresql://user:password@localhost:5432/ecommerce
@@ -471,10 +506,10 @@ npm run dev
 
 ### Reviews
 
-- `GET /api/reviews?productId=[id]` - Get product reviews
-- `POST /api/reviews` - Submit review (authenticated)
-- `PUT /api/reviews/[id]` - Update review (owner)
-- `DELETE /api/reviews/[id]` - Delete review (owner)
+- `GET /api/reviews?productId=[id]` - Get product reviews with average rating and count
+- `POST /api/reviews` - Submit review (authenticated) - Auto-updates Product.rating and reviewCount
+- `PUT /api/reviews/[id]` - Update review (owner) - Recalculates Product.rating
+- `DELETE /api/reviews/[id]` - Delete review (owner) - Recalculates Product.rating and reviewCount
 
 ### Orders
 
@@ -557,6 +592,21 @@ npm run dev
 - [ ] Bulk pricing updates for distributors
 
 ## Troubleshooting
+
+### Neon PostgreSQL
+
+**Tips**:
+
+- Neon automatically suspends inactive databases to save compute hours
+- Database wakes up instantly on first query
+- Monitor usage in Neon Dashboard to avoid hitting limits
+- Consider upgrading to Pro tier if you exceed free limits
+
+**Connection Issues**:
+
+- Ensure `?sslmode=require` is in your DATABASE_URL
+- Check firewall/network settings if connection fails
+- Verify connection string from Neon Dashboard
 
 ### Prisma Client Issues
 

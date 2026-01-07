@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { Toast } from "@/components/toast";
 
 interface ProductFormProps {
   initialData?: {
     id: string;
+    sku: string;
     name: string;
     description: string;
     price: number;
@@ -25,6 +27,7 @@ export default function ProductForm({
   const [isLoading, setIsLoading] = useState(false);
   const [previewImage, setPreviewImage] = useState(initialData?.image || "");
   const [formData, setFormData] = useState({
+    sku: initialData?.sku || "",
     name: initialData?.name || "",
     description: initialData?.description || "",
     price: initialData?.price || 0,
@@ -33,6 +36,17 @@ export default function ProductForm({
     stock: initialData?.stock || 0
   });
   const [error, setError] = useState("");
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
+
+  const showToast = (
+    message: string,
+    type: "success" | "error" = "success"
+  ) => {
+    setToast({ message, type });
+  };
 
   const categories = [
     "electronics",
@@ -81,6 +95,10 @@ export default function ProductForm({
       setError("Product name is required");
       return;
     }
+    if (!isEditing && !formData.sku.trim()) {
+      setError("SKU is required");
+      return;
+    }
     if (formData.price < 0) {
       setError("Price cannot be negative");
       return;
@@ -105,6 +123,9 @@ export default function ProductForm({
 
       // Create FormData for file upload
       const submitData = new FormData();
+      if (!isEditing) {
+        submitData.append("sku", formData.sku);
+      }
       submitData.append("name", formData.name);
       submitData.append("description", formData.description);
       submitData.append("price", String(formData.price));
@@ -148,13 +169,17 @@ export default function ProductForm({
       const responseData = await response.json();
       console.log("Success response data:", responseData);
 
-      alert(
+      showToast(
         isEditing
           ? "Product updated successfully"
           : "Product created successfully"
       );
-      router.push("/admin/products");
-      router.refresh();
+
+      // Redirect after showing toast
+      setTimeout(() => {
+        router.push("/admin/products");
+        router.refresh();
+      }, 1500);
     } catch (error) {
       console.error("Error saving product:", error);
       setError("An error occurred while saving the product");
@@ -190,6 +215,34 @@ export default function ProductForm({
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
           />
+        </div>
+
+        {/* SKU */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            SKU (Stock Keeping Unit) *
+          </label>
+          {isEditing ? (
+            <div className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-700 font-mono">
+              {formData.sku}
+              <span className="ml-2 text-xs text-gray-500">(Read-only)</span>
+            </div>
+          ) : (
+            <input
+              type="text"
+              name="sku"
+              value={formData.sku}
+              onChange={handleInputChange}
+              placeholder="e.g., ELEC-001, COMP-LAPTOP-01"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+              required
+            />
+          )}
+          <p className="text-xs text-gray-500 mt-1">
+            {isEditing
+              ? "SKU cannot be changed after creation to maintain data integrity"
+              : "Unique identifier for inventory management (cannot be changed later)"}
+          </p>
         </div>
 
         {/* Description */}
@@ -347,6 +400,15 @@ export default function ProductForm({
           </button>
         </div>
       </form>
+
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }
