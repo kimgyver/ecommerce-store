@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { syncDistributorUsers } from "@/lib/sync-distributors";
 
 // GET /api/admin/distributors - Get all distributors
 export async function GET() {
@@ -105,7 +106,16 @@ export async function POST(request: Request) {
       }
     });
 
-    return NextResponse.json({ distributor }, { status: 201 });
+    // Auto-link existing users with matching email domain
+    const syncResult = await syncDistributorUsers(distributor.id);
+
+    return NextResponse.json(
+      {
+        distributor,
+        syncedUsers: syncResult.updated
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Create distributor error:", error);
     return NextResponse.json(

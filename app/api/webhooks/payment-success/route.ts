@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { generatePONumber, calculatePaymentDueDate } from "@/lib/po-generator";
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,6 +21,22 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Get user info to check if distributor
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        role: true,
+        distributorId: true
+      }
+    });
+
+    console.log("=== Webhook Debug ===");
+    console.log("User info:", user);
+    console.log(
+      "Is distributor check:",
+      user?.role === "distributor" && user?.distributorId
+    );
 
     // Check if order already exists for this payment intent (idempotency)
     const existingOrder = await prisma.order.findUnique({
@@ -82,6 +99,19 @@ export async function POST(request: NextRequest) {
 
     // Create order and clear cart in a transaction
     const order = await prisma.$transaction(async tx => {
+      // Generate PO number for B2B orders
+      const isDistributor = user?.role === "distributor" && user?.distributorId;
+      console.log("=== PO Generation ===");
+      console.log("isDistributor:", isDistributor);
+      console.log("user.role:", user?.role);
+      console.log("user.distributorId:", user?.distributorId);
+
+      const poNumber = isDistributor ? await generatePONumber() : null;
+      const paymentDueDate = isDistributor ? calculatePaymentDueDate(30) : null; // Net 30 for B2B
+
+      console.log("Generated PO:", poNumber);
+      console.log("Payment Due Date:", paymentDueDate);
+
       // Create order with paymentIntentId (unique constraint prevents duplicates)
       const newOrder = await tx.order.create({
         data: {
@@ -89,6 +119,9 @@ export async function POST(request: NextRequest) {
           paymentIntentId,
           totalPrice: totalPrice,
           status: "pending",
+          poNumber,
+          paymentDueDate,
+          paymentMethod: "stripe",
           items: {
             create: cart.items.map(item => ({
               productId: item.productId,
@@ -131,6 +164,8 @@ export async function POST(request: NextRequest) {
         id: order.id,
         status: order.status,
         totalPrice: order.totalPrice,
+        poNumber: order.poNumber,
+        paymentDueDate: order.paymentDueDate,
         items: order.items
       }
     });

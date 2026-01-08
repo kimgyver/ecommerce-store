@@ -107,6 +107,7 @@ export async function PATCH(
     const validStatuses = [
       "pending",
       "processing",
+      "paid",
       "shipped",
       "delivered",
       "cancelled"

@@ -15,6 +15,40 @@ A modern, full-stack e-commerce platform built with Next.js 16, React 19, and Po
 
 ## Features
 
+### B2B PO (Purchase Order) Workflow
+
+#### Standard Features
+
+- **B2B Checkout with PO Option**: At checkout, users can select between Stripe (card) and PO (purchase order). PO orders are created with `pending_payment` status.
+- **PO Order Email**: When a PO order is placed, a simple HTML confirmation email is sent to the customer.
+- **Admin PO Status Management**: Admins can manage PO order status in two steps: "Approve Order" (shipping approval) and "Mark as Paid" (payment confirmation). The `paid` status is only available for PO orders.
+
+#### Advanced Features
+
+- **PDF PO Generation**: Downloadable PO PDF is available on the order detail page (using jsPDF).
+- **Automated Payment Reminder Emails**: Scheduled emails are sent 7 days before, 1 day before, on the due date, and 1/7 days overdue (using Vercel Cron).
+- **Overdue Notification System**: Overdue reminders use different templates/messages and prevent duplicate sends.
+
+```mermaid
+sequenceDiagram
+   participant User
+   participant Store
+   participant Admin
+   participant Email
+   participant PDF
+
+   User->>Store: 상품 선택, 체크아웃
+   Store->>User: 결제 방식 선택 (Stripe/PO)
+   User->>Store: PO 선택, 주문 생성
+   Store->>PDF: PO PDF 생성
+   Store->>Email: PO 주문 확인 이메일+PDF 발송
+   Admin->>Store: 주문 승인(Approve Order)
+   Store->>User: 출고/배송 진행
+   Admin->>Store: 입금 확인(Mark as Paid)
+   Store->>User: 결제 완료 알림
+   Store->>Email: 자동 결제/연체 알림 (스케줄)
+```
+
 ### Core E-Commerce Features
 
 - **Product Management** - Browse, search, and filter products by category

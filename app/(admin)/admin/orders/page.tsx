@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Toast } from "@/components/toast";
+import { downloadPOPDF } from "@/lib/pdf-generator";
 
 interface OrderItem {
   id: string;
@@ -24,6 +26,10 @@ interface Order {
   status: string;
   createdAt: string;
   items: OrderItem[];
+  poNumber?: string | null;
+  paymentDueDate?: string | null;
+  paymentMethod?: string;
+  invoiceNumber?: string | null;
 }
 
 // 파비콘 변경 함수
@@ -43,10 +49,21 @@ function changeFavicon(emoji: string) {
   favicon.href = dataUrl;
 }
 
+type ToastType = "success" | "error" | "info";
+
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState("all");
+  const [approvingOrder, setApprovingOrder] = useState<string | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: ToastType;
+  } | null>(null);
+
+  const showToast = (message: string, type: ToastType = "success") => {
+    setToast({ message, type });
+  };
 
   useEffect(() => {
     // 타이틀 변경
@@ -96,13 +113,68 @@ export default function OrdersPage() {
       }
     } catch (error) {
       console.error("Failed to update order:", error);
-      alert("Failed to update order status");
+      showToast("Failed to update order status", "error");
+    }
+  };
+
+  const handleConfirmPayment = async (orderId: string) => {
+    if (!confirm("Are you sure you want to approve this order?")) {
+      return;
+    }
+
+    try {
+      setApprovingOrder(orderId);
+      await handleStatusChange(orderId, "processing");
+      showToast(
+        "Payment approved! Order status updated to Processing.",
+        "success"
+      );
+    } catch (error) {
+      console.error("Failed to approve order:", error);
+      showToast("Failed to approve order", "error");
+    } finally {
+      setApprovingOrder(null);
+    }
+  };
+
+  const handleDownloadPO = (order: Order) => {
+    if (!order.poNumber || !order.paymentDueDate) {
+      showToast("This order doesn't have PO information", "error");
+      return;
+    }
+
+    try {
+      downloadPOPDF({
+        poNumber: order.poNumber,
+        orderId: order.id,
+        orderDate: new Date(order.createdAt),
+        paymentDueDate: new Date(order.paymentDueDate),
+        customerName: order.user?.name || "Customer",
+        customerEmail: order.user?.email || "",
+        items: order.items.map(item => ({
+          productName: item.product.name,
+          quantity: item.quantity,
+          price: item.price
+        })),
+        shippingAddress: {
+          recipientName: "N/A",
+          recipientPhone: "N/A",
+          postalCode: "N/A",
+          address1: "N/A"
+        },
+        totalAmount: order.totalPrice
+      });
+    } catch (error) {
+      console.error("Failed to generate PDF:", error);
+      showToast("Failed to generate PDF", "error");
     }
   };
 
   const statuses = [
     "pending",
+    "pending_payment",
     "processing",
+    "paid",
     "shipped",
     "delivered",
     "cancelled"
@@ -110,6 +182,14 @@ export default function OrdersPage() {
 
   return (
     <div>
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
       <h1 className="text-4xl font-bold mb-8">Orders</h1>
 
       {/* Filter */}
@@ -153,6 +233,14 @@ export default function OrdersPage() {
                   <p className="text-lg font-mono font-bold text-gray-900">
                     {order.id}
                   </p>
+                  {order.poNumber && (
+                    <div className="mt-1">
+                      <p className="text-xs text-gray-500">PO Number</p>
+                      <p className="text-sm font-mono font-semibold text-blue-600">
+                        {order.poNumber}
+                      </p>
+                    </div>
+                  )}
                   {order.user && (
                     <div className="mt-2">
                       <p className="text-xs text-gray-500">Customer</p>
@@ -170,6 +258,19 @@ export default function OrdersPage() {
                   <p className="text-2xl font-bold text-blue-600">
                     ${order.totalPrice.toFixed(2)}
                   </p>
+                  {order.paymentMethod && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      {order.paymentMethod === "stripe" ? "💳 Stripe" : "📄 PO"}
+                    </p>
+                  )}
+                  {order.paymentDueDate && (
+                    <div className="mt-1">
+                      <p className="text-xs text-gray-500">Payment Due</p>
+                      <p className="text-sm font-medium text-orange-600">
+                        {new Date(order.paymentDueDate).toLocaleDateString()}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -185,15 +286,51 @@ export default function OrdersPage() {
               </div>
 
               <div className="flex justify-between items-center">
-                <p className="text-sm text-gray-600">
-                  {new Date(order.createdAt).toLocaleDateString()}
-                </p>
+                <div className="flex items-center gap-3">
+                  <p className="text-sm text-gray-600">
+                    {new Date(order.createdAt).toLocaleDateString()}
+                  </p>
+                  {order.poNumber && (
+                    <button
+                      onClick={() => handleDownloadPO(order)}
+                      className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors flex items-center gap-1"
+                    >
+                      📄 Download PO PDF
+                    </button>
+                  )}
+                  {order.status === "pending_payment" && (
+                    <button
+                      onClick={() => handleConfirmPayment(order.id)}
+                      disabled={approvingOrder === order.id}
+                      className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {approvingOrder === order.id
+                        ? "Approving..."
+                        : "✓ Approve Order"}
+                    </button>
+                  )}
+                  {order.status === "processing" &&
+                    order.paymentMethod === "po" && (
+                      <button
+                        onClick={async () => {
+                          if (!confirm("Mark this PO order as paid?")) return;
+                          await handleStatusChange(order.id, "paid");
+                          showToast("Order marked as paid.", "success");
+                        }}
+                        className="px-4 py-2 bg-blue-700 text-white text-sm font-medium rounded-lg hover:bg-blue-800 transition-colors"
+                      >
+                        Mark as Paid
+                      </button>
+                    )}
+                </div>
                 <select
                   value={order.status}
                   onChange={e => handleStatusChange(order.id, e.target.value)}
                   className={`px-3 py-2 rounded-lg font-medium text-sm border-0 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                     order.status === "pending"
                       ? "bg-yellow-100 text-yellow-800"
+                      : order.status === "pending_payment"
+                      ? "bg-orange-100 text-orange-800"
                       : order.status === "processing"
                       ? "bg-blue-100 text-blue-800"
                       : order.status === "shipped"
@@ -203,11 +340,22 @@ export default function OrdersPage() {
                       : "bg-red-100 text-red-800"
                   }`}
                 >
-                  {statuses.map(status => (
-                    <option key={status} value={status}>
-                      {status.charAt(0).toUpperCase() + status.slice(1)}
-                    </option>
-                  ))}
+                  {statuses
+                    .filter(status => {
+                      if (status === "paid") {
+                        return order.paymentMethod === "po";
+                      }
+                      return true;
+                    })
+                    .map(status => (
+                      <option key={status} value={status}>
+                        {status === "pending_payment"
+                          ? "Pending Payment"
+                          : status === "paid"
+                          ? "Paid"
+                          : status.charAt(0).toUpperCase() + status.slice(1)}
+                      </option>
+                    ))}
                 </select>
               </div>
             </div>

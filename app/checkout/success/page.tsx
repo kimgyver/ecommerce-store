@@ -20,13 +20,17 @@ interface OrderDetails {
   status: string;
   totalPrice: number;
   items: OrderItem[];
+  poNumber?: string;
+  paymentDueDate?: string;
 }
 
 function CheckoutSuccessContent() {
   const searchParams = useSearchParams();
   const paymentIntentId = searchParams.get("payment_intent");
+  const orderId = searchParams.get("order_id");
   const [paymentStatus, setPaymentStatus] = useState("loading");
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
+  const [isPOOrder, setIsPOOrder] = useState(false);
   const processedRef = useRef(false);
   const { clearCart } = useCart();
 
@@ -37,6 +41,30 @@ function CheckoutSuccessContent() {
 
     const completeCheckout = async () => {
       try {
+        // PO Order (no payment intent)
+        if (orderId && !paymentIntentId) {
+          setIsPOOrder(true);
+          // Fetch order details
+          const orderRes = await fetch(`/api/orders?orderId=${orderId}`);
+          if (orderRes.ok) {
+            const orders = await orderRes.json();
+            const order = Array.isArray(orders) ? orders[0] : orders;
+            setOrderDetails(order);
+            setPaymentStatus("success");
+
+            // Clear cart
+            try {
+              await clearCart();
+              localStorage.removeItem("guest_cart");
+            } catch (error) {
+              console.error("Failed to clear cart context:", error);
+            }
+          } else {
+            setPaymentStatus("error");
+          }
+          return;
+        }
+
         if (!paymentIntentId) {
           setPaymentStatus("error");
           return;
@@ -78,7 +106,7 @@ function CheckoutSuccessContent() {
     };
 
     completeCheckout();
-  }, [paymentIntentId, clearCart]);
+  }, [paymentIntentId, orderId, clearCart]);
 
   if (paymentStatus === "loading") {
     return (
@@ -116,10 +144,20 @@ function CheckoutSuccessContent() {
       <div className="max-w-2xl mx-auto px-4">
         {/* Success Message */}
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-          <div className="bg-green-50 border-b-4 border-green-500 px-6 py-8 text-center">
-            <div className="text-6xl mb-4">✓</div>
-            <h1 className="text-4xl font-bold text-green-700 mb-2">
-              Payment Successful!
+          <div
+            className={`${
+              isPOOrder
+                ? "bg-blue-50 border-blue-500"
+                : "bg-green-50 border-green-500"
+            } border-b-4 px-6 py-8 text-center`}
+          >
+            <div className="text-6xl mb-4">{isPOOrder ? "📄" : "✓"}</div>
+            <h1
+              className={`text-4xl font-bold ${
+                isPOOrder ? "text-blue-700" : "text-green-700"
+              } mb-2`}
+            >
+              {isPOOrder ? "Purchase Order Created!" : "Payment Successful!"}
             </h1>
             <p className="text-lg text-gray-600">Thank you for your order!</p>
           </div>
@@ -136,11 +174,34 @@ function CheckoutSuccessContent() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Status</p>
-                  <p className="text-lg font-bold text-yellow-600">
-                    {orderDetails.status}
+                  <p
+                    className={`text-lg font-bold ${
+                      isPOOrder ? "text-orange-600" : "text-yellow-600"
+                    }`}
+                  >
+                    {orderDetails.status === "pending_payment"
+                      ? "Pending Payment"
+                      : orderDetails.status}
                   </p>
                 </div>
               </div>
+
+              {isPOOrder && orderDetails.poNumber && (
+                <div className="bg-blue-50 border border-blue-200 rounded p-4">
+                  <p className="text-sm text-gray-600 mb-1">PO Number</p>
+                  <p className="text-xl font-bold text-blue-700">
+                    {orderDetails.poNumber}
+                  </p>
+                  {orderDetails.paymentDueDate && (
+                    <p className="text-sm text-gray-600 mt-2">
+                      Payment Due:{" "}
+                      {new Date(
+                        orderDetails.paymentDueDate
+                      ).toLocaleDateString()}
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div>
                 <p className="text-sm text-gray-600 mb-2">Items Ordered</p>
@@ -160,17 +221,24 @@ function CheckoutSuccessContent() {
 
               <div className="border-t pt-4">
                 <div className="flex justify-between text-lg font-bold">
-                  <span>Total Paid:</span>
+                  <span>{isPOOrder ? "Total Amount:" : "Total Paid:"}</span>
                   <span className="text-blue-600">
                     ${orderDetails.totalPrice?.toFixed(2)}
                   </span>
                 </div>
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded p-4">
-                <p className="text-sm text-blue-900">
-                  A confirmation email has been sent to your email address. You
-                  can track your order status in your profile.
+              <div
+                className={`${
+                  isPOOrder
+                    ? "bg-blue-50 border-blue-200"
+                    : "bg-green-50 border-green-200"
+                } border rounded p-4`}
+              >
+                <p className="text-sm text-gray-900">
+                  {isPOOrder
+                    ? "A Purchase Order has been generated and sent to your email. Please arrange payment within 30 days."
+                    : "A confirmation email has been sent to your email address. You can track your order status in your profile."}
                 </p>
               </div>
             </div>

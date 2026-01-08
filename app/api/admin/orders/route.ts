@@ -30,7 +30,22 @@ export async function GET() {
 
     // Fetch ALL orders for admin
     const orders = await prisma.order.findMany({
-      include: {
+      select: {
+        id: true,
+        userId: true,
+        totalPrice: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        poNumber: true,
+        paymentDueDate: true,
+        paymentMethod: true,
+        invoiceNumber: true,
+        recipientName: true,
+        recipientPhone: true,
+        shippingPostalCode: true,
+        shippingAddress1: true,
+        shippingAddress2: true,
         user: {
           select: {
             name: true,

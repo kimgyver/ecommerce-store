@@ -96,16 +96,28 @@ model Order {
   shippingAddress1   String?
   shippingAddress2   String?
 
-  paymentIntentId String    @unique // Prevent duplicate orders from the same payment
+  paymentIntentId String?   @unique // Prevent duplicate orders from the same payment (null for PO orders)
+
+  // B2B PO (Purchase Order) fields
+  poNumber        String?   @unique  // PO-2026-0001 format (auto-generated for B2B orders)
+  paymentDueDate  DateTime?          // Payment due date for Net 30/60 terms
+  paymentMethod   String    @default("stripe")  // stripe, po (purchase order)
+  invoiceNumber   String?   @unique  // INV-2026-0001 format (generated when payment confirmed)
+  
+  // Payment reminder tracking (JSON array of sent reminder types)
+  // Format: ["7_days_before", "1_day_before", "due_date", "overdue_1", "overdue_7"]
+  paymentRemindersSent String[] @default([])
 
   items         OrderItem[]
   totalPrice    Float
-  status        String    @default("pending") // pending, processing, shipped, delivered, cancelled
+  status        String    @default("pending") // pending, pending_payment, processing, shipped, delivered, cancelled, paid
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   
   @@index([userId])
+  @@index([poNumber])
+  @@index([status])
 }
 
 model OrderItem {

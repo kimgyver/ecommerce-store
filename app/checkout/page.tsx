@@ -45,11 +45,19 @@ export default function CheckoutPage() {
   });
   const [orderError, setOrderError] = useState<string | null>(null);
   const [saveAsDefault, setSaveAsDefault] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"stripe" | "po">("stripe");
+  const [isDistributor, setIsDistributor] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push(`/auth/login?callbackUrl=/checkout`);
       return;
+    }
+
+    // Check if user is distributor
+    if (status === "authenticated" && session?.user) {
+      setIsDistributor(session.user.role === "distributor");
     }
 
     // After login: sync guest_cart to server if exists
@@ -158,29 +166,32 @@ export default function CheckoutPage() {
       );
       setTotalAmount(total);
 
-      // Create payment intent
-      const paymentRes = await fetch("/api/payments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          items: cartData.items,
-          totalAmount: total
-        })
-      });
+      // Only create payment intent if Stripe is selected
+      if (paymentMethod === "stripe") {
+        // Create payment intent
+        const paymentRes = await fetch("/api/payments", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            items: cartData.items,
+            totalAmount: total
+          })
+        });
 
-      if (!paymentRes.ok) {
-        const error = await paymentRes.text();
-        throw new Error(`Failed to create payment: ${error}`);
+        if (!paymentRes.ok) {
+          const error = await paymentRes.text();
+          throw new Error(`Failed to create payment: ${error}`);
+        }
+
+        const paymentData = await paymentRes.json();
+
+        if (!paymentData.clientSecret || !paymentData.paymentIntentId) {
+          throw new Error("No client secret or paymentIntentId received");
+        }
+
+        setClientSecret(paymentData.clientSecret);
+        setPaymentIntentId(paymentData.paymentIntentId);
       }
-
-      const paymentData = await paymentRes.json();
-
-      if (!paymentData.clientSecret || !paymentData.paymentIntentId) {
-        throw new Error("No client secret or paymentIntentId received");
-      }
-
-      setClientSecret(paymentData.clientSecret);
-      setPaymentIntentId(paymentData.paymentIntentId);
     } catch (error) {
       console.error("Error loading checkout:", error);
       alert(
@@ -198,7 +209,7 @@ export default function CheckoutPage() {
     return <div className="text-center py-12">Loading...</div>;
   }
 
-  if (!clientSecret) {
+  if (paymentMethod === "stripe" && !clientSecret) {
     return (
       <div className="max-w-md mx-auto px-4 py-8">
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
@@ -351,88 +362,257 @@ export default function CheckoutPage() {
         {/* Payment Form */}
         <div>
           <h2 className="text-2xl font-bold mb-6">Payment Details</h2>
-          <div className="bg-white rounded-lg shadow p-6">
-            <Elements
-              stripe={stripePromise}
-              options={{
-                clientSecret,
-                appearance: {
-                  theme: "stripe"
-                }
-              }}
-            >
-              <PaymentForm
-                totalAmount={totalAmount}
-                onSuccess={async () => {
-                  setOrderError(null);
-                  // Validate shipping info
-                  if (
-                    !shipping.name ||
-                    !shipping.phone ||
-                    !shipping.postalCode ||
-                    !shipping.address1
-                  ) {
-                    setOrderError(
-                      "Please fill in all required shipping fields."
-                    );
-                    return;
-                  }
-                  console.log("[Order API] Creating order...");
-                  try {
-                    const res = await fetch("/api/orders", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        items: cartItems.map(item => ({
-                          productId: item.id,
-                          quantity: item.quantity,
-                          price: parseFloat(item.price.toFixed(2)),
-                          basePrice: item.basePrice
-                            ? parseFloat(item.basePrice.toFixed(2))
-                            : undefined
-                        })),
-                        shipping,
-                        paymentIntentId
-                      })
-                    });
-                    console.log("[Order API] Response status:", res.status);
-                    if (!res.ok) {
-                      const err = await res.json();
-                      console.error("[Order API Error]", err);
-                      setOrderError(err.error || "Order creation failed");
-                      return;
+
+          {/* Payment Method Selection for B2B */}
+          {isDistributor && (
+            <div className="bg-white rounded-lg shadow p-6 mb-6">
+              <h3 className="text-lg font-semibold mb-4">Payment Method</h3>
+              <div className="space-y-3">
+                <label className="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="stripe"
+                    checked={paymentMethod === "stripe"}
+                    onChange={e => {
+                      setPaymentMethod(e.target.value as "stripe" | "po");
+                      if (e.target.value === "stripe" && !clientSecret) {
+                        loadCartAndCreatePayment();
+                      }
+                    }}
+                    className="mr-3"
+                  />
+                  <div>
+                    <div className="font-semibold">
+                      💳 Pay Now (Credit Card)
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      Instant payment via Stripe
+                    </div>
+                  </div>
+                </label>
+                <label className="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="po"
+                    checked={paymentMethod === "po"}
+                    onChange={e =>
+                      setPaymentMethod(e.target.value as "stripe" | "po")
                     }
-                    // On successful order, save as default shipping if 'Use this shipping info as default for next time' is checked
-                    if (saveAsDefault) {
+                    className="mr-3"
+                  />
+                  <div>
+                    <div className="font-semibold">
+                      📄 Purchase Order (Net 30)
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      Pay within 30 days from order date
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-white rounded-lg shadow p-6">
+            {paymentMethod === "stripe" ? (
+              clientSecret ? (
+                <Elements
+                  stripe={stripePromise}
+                  options={{
+                    clientSecret,
+                    appearance: {
+                      theme: "stripe"
+                    }
+                  }}
+                >
+                  <PaymentForm
+                    totalAmount={totalAmount}
+                    onSuccess={async () => {
+                      setOrderError(null);
+                      // Validate shipping info
+                      if (
+                        !shipping.name ||
+                        !shipping.phone ||
+                        !shipping.postalCode ||
+                        !shipping.address1
+                      ) {
+                        setOrderError(
+                          "Please fill in all required shipping fields."
+                        );
+                        return;
+                      }
+                      console.log("[Order API] Creating order...");
                       try {
-                        await fetch("/api/user/profile", {
-                          method: "PUT",
+                        const res = await fetch("/api/orders", {
+                          method: "POST",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({
-                            defaultRecipientName: shipping.name,
-                            defaultRecipientPhone: shipping.phone,
-                            defaultShippingPostalCode: shipping.postalCode,
-                            defaultShippingAddress1: shipping.address1,
-                            defaultShippingAddress2: shipping.address2
+                            items: cartItems.map(item => ({
+                              productId: item.id,
+                              quantity: item.quantity,
+                              price: parseFloat(item.price.toFixed(2)),
+                              basePrice: item.basePrice
+                                ? parseFloat(item.basePrice.toFixed(2))
+                                : undefined
+                            })),
+                            shipping,
+                            paymentIntentId
                           })
                         });
-                      } catch (e) {
-                        // Ignore: order continues even if saving shipping address fails
+                        console.log("[Order API] Response status:", res.status);
+                        if (!res.ok) {
+                          const err = await res.json();
+                          console.error("[Order API Error]", err);
+                          setOrderError(err.error || "Order creation failed");
+                          return;
+                        }
+                        // On successful order, save as default shipping if 'Use this shipping info as default for next time' is checked
+                        if (saveAsDefault) {
+                          try {
+                            await fetch("/api/user/profile", {
+                              method: "PUT",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({
+                                defaultRecipientName: shipping.name,
+                                defaultRecipientPhone: shipping.phone,
+                                defaultShippingPostalCode: shipping.postalCode,
+                                defaultShippingAddress1: shipping.address1,
+                                defaultShippingAddress2: shipping.address2
+                              })
+                            });
+                          } catch (e) {
+                            // Ignore: order continues even if saving shipping address fails
+                          }
+                        }
+                        console.log(
+                          "[Order API] Order created successfully, navigating to /checkout/success"
+                        );
+                        router.push(
+                          `/checkout/success?payment_intent=${paymentIntentId}`
+                        );
+                      } catch (err) {
+                        console.error("[Order API Exception]", err);
+                        setOrderError("Order creation failed");
                       }
+                    }}
+                  />
+                </Elements>
+              ) : (
+                <div className="text-center text-gray-500">
+                  Initializing payment...
+                </div>
+              )
+            ) : (
+              /* PO Payment Method */
+              <div>
+                <h3 className="text-lg font-semibold mb-4">
+                  Purchase Order Details
+                </h3>
+                <div className="space-y-3 mb-6">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Payment Terms:</span>
+                    <span className="font-semibold">Net 30</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Payment Due:</span>
+                    <span className="font-semibold">
+                      {new Date(
+                        Date.now() + 30 * 24 * 60 * 60 * 1000
+                      ).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded">
+                    A Purchase Order will be generated and sent to your email.
+                  </div>
+                </div>
+                <button
+                  onClick={async () => {
+                    if (isSubmitting) return; // Prevent double click
+
+                    setOrderError(null);
+                    // Validate shipping info
+                    if (
+                      !shipping.name ||
+                      !shipping.phone ||
+                      !shipping.postalCode ||
+                      !shipping.address1
+                    ) {
+                      setOrderError(
+                        "Please fill in all required shipping fields."
+                      );
+                      return;
                     }
-                    console.log(
-                      "[Order API] Order created successfully, navigating to /checkout/success"
-                    );
-                    router.push(
-                      `/checkout/success?payment_intent=${paymentIntentId}`
-                    );
-                  } catch (err) {
-                    console.error("[Order API Exception]", err);
-                    setOrderError("Order creation failed");
-                  }
-                }}
-              />
-            </Elements>
+
+                    setIsSubmitting(true);
+                    console.log("[PO Order] Creating order...");
+                    try {
+                      const res = await fetch("/api/orders", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          items: cartItems.map(item => ({
+                            productId: item.id,
+                            quantity: item.quantity,
+                            price: parseFloat(item.price.toFixed(2)),
+                            basePrice: item.basePrice
+                              ? parseFloat(item.basePrice.toFixed(2))
+                              : undefined
+                          })),
+                          shipping,
+                          paymentMethod: "po"
+                        })
+                      });
+                      console.log("[PO Order] Response status:", res.status);
+                      if (!res.ok) {
+                        const err = await res.json();
+                        console.error("[PO Order Error]", err);
+                        setOrderError(err.error || "Order creation failed");
+                        setIsSubmitting(false);
+                        return;
+                      }
+                      const orderData = await res.json();
+                      if (saveAsDefault) {
+                        try {
+                          await fetch("/api/user/profile", {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              defaultRecipientName: shipping.name,
+                              defaultRecipientPhone: shipping.phone,
+                              defaultShippingPostalCode: shipping.postalCode,
+                              defaultShippingAddress1: shipping.address1,
+                              defaultShippingAddress2: shipping.address2
+                            })
+                          });
+                        } catch (e) {
+                          // Ignore
+                        }
+                      }
+                      console.log(
+                        "[PO Order] Order created successfully, navigating to success"
+                      );
+                      router.push(
+                        `/checkout/success?order_id=${orderData.order.id}`
+                      );
+                    } catch (err) {
+                      console.error("[PO Order Exception]", err);
+                      setOrderError("Order creation failed");
+                      setIsSubmitting(false);
+                    }
+                  }}
+                  disabled={isSubmitting}
+                  className={`w-full py-3 px-4 rounded-lg font-semibold ${
+                    isSubmitting
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-blue-600 hover:bg-blue-700"
+                  } text-white`}
+                >
+                  {isSubmitting ? "Processing..." : "Place Order (PO)"}
+                </button>
+              </div>
+            )}
             {/* Error message UI: separate orderError and errorMessage to avoid displaying both simultaneously */}
             {orderError && !orderError.includes("Payment") && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mt-4">

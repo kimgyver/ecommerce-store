@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { generatePONumber, calculatePaymentDueDate } from "@/lib/po-generator";
+import { sendPOEmail } from "@/lib/email";
 
 interface CartItem {
   productId: string;
@@ -21,7 +23,8 @@ interface ShippingInfo {
 interface OrderRequest {
   items: CartItem[];
   shipping: ShippingInfo;
-  paymentIntentId: string;
+  paymentIntentId?: string;
+  paymentMethod?: "stripe" | "po";
 }
 
 export async function POST(request: Request) {
@@ -36,15 +39,52 @@ export async function POST(request: Request) {
     }
 
     const body = (await request.json()) as OrderRequest;
-    const { items, shipping, paymentIntentId } = body;
+    const { items, shipping, paymentIntentId, paymentMethod = "stripe" } = body;
     const userId = session.user.id;
 
-    if (!items || items.length === 0 || !shipping || !paymentIntentId) {
+    // Validate based on payment method
+    if (!items || items.length === 0 || !shipping) {
       return NextResponse.json(
         { error: "Invalid request data" },
         { status: 400 }
       );
     }
+
+    // paymentIntentId is required for Stripe, optional for PO
+    if (paymentMethod === "stripe" && !paymentIntentId) {
+      return NextResponse.json(
+        { error: "Payment intent ID required for Stripe payment" },
+        { status: 400 }
+      );
+    }
+
+    // Get user info to check if distributor
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        role: true,
+        distributorId: true
+      }
+    });
+
+    // Generate PO number for B2B orders
+    const isDistributor = user?.role === "distributor" && user?.distributorId;
+    const poNumber = isDistributor ? await generatePONumber() : null;
+    const paymentDueDate = isDistributor ? calculatePaymentDueDate(30) : null; // Net 30 for B2B
+
+    // Determine order status based on payment method
+    const orderStatus = paymentMethod === "po" ? "pending_payment" : "pending";
+
+    console.log("=== Order Creation Debug ===");
+    console.log("User:", {
+      role: user?.role,
+      distributorId: user?.distributorId
+    });
+    console.log("Payment Method:", paymentMethod);
+    console.log("isDistributor:", isDistributor);
+    console.log("Generated PO:", poNumber);
+    console.log("Payment Due Date:", paymentDueDate);
+    console.log("Order Status:", orderStatus);
 
     // 1. Check and update stock, create order, clear cart in a single transaction
     let order;
@@ -74,7 +114,11 @@ export async function POST(request: Request) {
             data: {
               userId,
               totalPrice,
-              paymentIntentId,
+              paymentIntentId: paymentIntentId || null,
+              poNumber,
+              paymentDueDate,
+              paymentMethod,
+              status: orderStatus,
               recipientName: shipping.name,
               recipientPhone: shipping.phone,
               shippingPostalCode: shipping.postalCode,
@@ -115,6 +159,73 @@ export async function POST(request: Request) {
         },
         { status: 400 }
       );
+    }
+
+    // Send email notification for PO orders (non-blocking)
+    if (paymentMethod === "po" && poNumber && order) {
+      console.log("[Email] PO order detected, preparing to send email...");
+      console.log("[Email] Payment method:", paymentMethod);
+      console.log("[Email] PO Number:", poNumber);
+      console.log("[Email] Order ID:", order.id);
+
+      // Get user details for email
+      const userDetails = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          name: true,
+          email: true
+        }
+      });
+
+      console.log("[Email] User details:", userDetails);
+
+      // Get order items with product details
+      const orderWithProducts = await prisma.order.findUnique({
+        where: { id: order.id },
+        include: {
+          items: {
+            include: {
+              product: true
+            }
+          }
+        }
+      });
+
+      console.log(
+        "[Email] Order with products:",
+        orderWithProducts ? "Found" : "Not found"
+      );
+
+      if (userDetails && orderWithProducts) {
+        console.log("[Email] Calling sendPOEmail...");
+        // Send email asynchronously (don't await - non-blocking)
+        sendPOEmail({
+          orderId: order.id,
+          poNumber,
+          customerName: userDetails.name || "Valued Customer",
+          customerEmail: userDetails.email,
+          totalAmount: order.totalPrice,
+          paymentDueDate: paymentDueDate!,
+          orderDate: order.createdAt,
+          items: orderWithProducts.items.map(item => ({
+            productName: item.product.name,
+            sku: item.product.sku || undefined,
+            quantity: item.quantity,
+            price: item.price,
+            basePrice: item.basePrice || undefined
+          })),
+          shippingAddress: {
+            recipientName: order.recipientName || "",
+            recipientPhone: order.recipientPhone || "",
+            postalCode: order.shippingPostalCode || "",
+            address1: order.shippingAddress1 || "",
+            address2: order.shippingAddress2 || undefined
+          }
+        }).catch(err => {
+          // Log but don't fail the request
+          console.error("[Email] Failed to send PO email:", err);
+        });
+      }
     }
 
     return NextResponse.json(
