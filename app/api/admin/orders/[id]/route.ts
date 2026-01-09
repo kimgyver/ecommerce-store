@@ -128,7 +128,11 @@ export async function PATCH(
         .maybeWarmStats(statsRoutes.computeStatistics)
         .catch((err: unknown) => {
           const msg = err instanceof Error ? err.message : String(err);
-          console.error("Failed to warm stats after admin order update:", msg, err);
+          console.error(
+            "Failed to warm stats after admin order update:",
+            msg,
+            err
+          );
         });
     } catch (e) {
       console.error(
