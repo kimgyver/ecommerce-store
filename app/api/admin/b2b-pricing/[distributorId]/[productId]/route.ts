@@ -158,6 +158,28 @@ export async function PUT(
       }
     });
 
+    // Invalidate & warm stats cache asynchronously (B2B pricing change may affect product selection/revenue)
+    try {
+      const stats = await import("@/lib/stats-cache");
+      const statsRoutes = await import("@/app/api/admin/statistics/route");
+      stats.default.invalidateStatsCache();
+      stats.default
+        .maybeWarmStats(statsRoutes.computeStatistics)
+        .catch((err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error(
+            "Failed to warm stats after B2B pricing update:",
+            msg,
+            err
+          );
+        });
+    } catch (e) {
+      console.error(
+        "Error invalidating/warming stats cache after B2B pricing update:",
+        e
+      );
+    }
+
     return NextResponse.json({ success: true, pricing: distributorPrice });
   } catch (error) {
     console.error("Update B2B pricing error:", error);
@@ -200,6 +222,28 @@ export async function DELETE(
         }
       }
     });
+
+    // Invalidate & warm stats cache asynchronously (B2B pricing delete may affect product selection/revenue)
+    try {
+      const stats = await import("@/lib/stats-cache");
+      const statsRoutes = await import("@/app/api/admin/statistics/route");
+      stats.default.invalidateStatsCache();
+      stats.default
+        .maybeWarmStats(statsRoutes.computeStatistics)
+        .catch((err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error(
+            "Failed to warm stats after B2B pricing delete:",
+            msg,
+            err
+          );
+        });
+    } catch (e) {
+      console.error(
+        "Error invalidating/warming stats cache after B2B pricing delete:",
+        e
+      );
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

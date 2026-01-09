@@ -104,6 +104,28 @@ export async function POST(
       }
     });
 
+    // Invalidate & warm stats cache asynchronously (category discounts may affect pricing -> product attractiveness)
+    try {
+      const stats = await import("@/lib/stats-cache");
+      const statsRoutes = await import("@/app/api/admin/statistics/route");
+      stats.default.invalidateStatsCache();
+      stats.default
+        .maybeWarmStats(statsRoutes.computeStatistics)
+        .catch((err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error(
+            "Failed to warm stats after category discount upsert:",
+            msg,
+            err
+          );
+        });
+    } catch (e) {
+      console.error(
+        "Error invalidating/warming stats cache after category discount upsert:",
+        e
+      );
+    }
+
     return NextResponse.json({ success: true, categoryDiscount });
   } catch (error) {
     console.error("Create/update category discount error:", error);
@@ -156,6 +178,28 @@ export async function DELETE(
         }
       }
     });
+
+    // Invalidate & warm stats cache asynchronously (category discount delete may affect pricing)
+    try {
+      const stats = await import("@/lib/stats-cache");
+      const statsRoutes = await import("@/app/api/admin/statistics/route");
+      stats.default.invalidateStatsCache();
+      stats.default
+        .maybeWarmStats(statsRoutes.computeStatistics)
+        .catch((err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error(
+            "Failed to warm stats after category discount delete:",
+            msg,
+            err
+          );
+        });
+    } catch (e) {
+      console.error(
+        "Error invalidating/warming stats cache after category discount delete:",
+        e
+      );
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

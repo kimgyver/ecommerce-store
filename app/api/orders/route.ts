@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { generatePONumber, calculatePaymentDueDate } from "@/lib/po-generator";
+import statsCache from "@/lib/stats-cache";
+import { computeStatistics } from "@/app/api/admin/statistics/route";
 import { sendPOEmail } from "@/lib/email";
 
 interface CartItem {
@@ -226,6 +228,21 @@ export async function POST(request: Request) {
           console.error("[Email] Failed to send PO email:", err);
         });
       }
+    }
+
+    // Invalidate and warm stats cache asynchronously
+    try {
+      statsCache.invalidateStatsCache();
+      statsCache
+        .warmStats(computeStatistics)
+        .catch(err =>
+          console.error("Failed to warm stats after order create:", err)
+        );
+    } catch (e) {
+      console.error(
+        "Error invalidating/warming stats cache after order create:",
+        e
+      );
     }
 
     return NextResponse.json(

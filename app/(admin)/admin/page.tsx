@@ -10,6 +10,9 @@ interface DashboardStats {
   totalOrders: number;
   totalRevenue: number;
   pendingOrders: number;
+  pendingQuotes?: number;
+  lowStockCount?: number;
+  dailyQuoteRequests?: Array<{ date: string; count: number }>;
   totalUsers: number;
   customerCount: number;
   distributorCount: number;
@@ -70,7 +73,7 @@ export default function DashboardPage() {
       <h1 className="text-4xl font-bold mb-8">Dashboard</h1>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
         <StatCard
           title="Total Products"
           value={stats?.totalProducts ?? 0}
@@ -94,6 +97,59 @@ export default function DashboardPage() {
           value={stats?.pendingOrders ?? 0}
           icon={Icons.clock}
           color="bg-orange-500"
+        />
+        <div className="relative">
+          <Link
+            href="/admin/quotes?status=requested"
+            aria-label={`Pending Quotes: ${stats?.pendingQuotes ?? 0}`}
+            title={`Pending Quotes: ${stats?.pendingQuotes ?? 0}`}
+          >
+            <StatCard
+              title="Pending Quotes"
+              value={stats?.pendingQuotes ?? 0}
+              icon={Icons.documentDuplicate}
+              color="bg-yellow-600"
+            />
+          </Link>
+          {stats?.pendingQuotes && stats.pendingQuotes > 0 && (
+            <span
+              className="absolute top-2 right-2 bg-red-600 text-white text-xs px-2 py-0.5 rounded"
+              aria-hidden
+            >
+              {stats.pendingQuotes}
+            </span>
+          )}
+          {/* sparkline: last 7 days of quote requests */}
+          <div className="absolute left-4 bottom-3 w-[60%] h-6">
+            {stats?.dailyQuoteRequests && (
+              <svg viewBox="0 0 100 20" className="w-full h-full">
+                {(() => {
+                  const data = stats.dailyQuoteRequests.slice(-7);
+                  if (!data || data.length === 0) return null;
+                  const max = Math.max(...data.map(d => d.count), 1);
+                  return data.map((d, i) => {
+                    const x = (i / (data.length - 1)) * 100;
+                    const y = 18 - (d.count / max) * 16;
+                    return (
+                      <circle
+                        key={i}
+                        cx={`${x}`}
+                        cy={`${y}`}
+                        r={1.2}
+                        fill="#fff"
+                      />
+                    );
+                  });
+                })()}
+              </svg>
+            )}
+          </div>
+        </div>
+        <StatCard
+          title="Low Stock"
+          value={stats?.lowStockCount ?? 0}
+          icon={Icons.store}
+          color="bg-red-600"
         />
       </div>
 

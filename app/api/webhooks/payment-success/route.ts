@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { generatePONumber, calculatePaymentDueDate } from "@/lib/po-generator";
+import statsCache from "@/lib/stats-cache";
+import { computeStatistics } from "@/app/api/admin/statistics/route";
 
 export async function POST(request: NextRequest) {
   try {
@@ -158,6 +160,20 @@ export async function POST(request: NextRequest) {
 
       return newOrder;
     });
+    // Invalidate and warm stats cache asynchronously
+    try {
+      statsCache.invalidateStatsCache();
+      statsCache
+        .maybeWarmStats(computeStatistics)
+        .catch(err =>
+          console.error("Failed to warm stats after webhook order create:", err)
+        );
+    } catch (e) {
+      console.error(
+        "Error invalidating/warming stats cache after webhook order:",
+        e
+      );
+    }
 
     return NextResponse.json({
       order: {

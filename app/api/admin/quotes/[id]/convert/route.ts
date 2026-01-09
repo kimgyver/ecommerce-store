@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import statsCache from "@/lib/stats-cache";
+import { computeStatistics } from "@/app/api/admin/statistics/route";
 
 // POST /api/admin/quotes/[id]/convert - Convert quote to order
 export async function POST(
@@ -58,6 +60,18 @@ export async function POST(
         orderId: order.id
       }
     });
+    // Invalidate stats cache and warm it asynchronously
+    try {
+      statsCache.invalidateStatsCache();
+      // maybe warm the cache in background
+      statsCache
+        .maybeWarmStats(computeStatistics)
+        .catch(err =>
+          console.error("Failed to warm stats after quote convert:", err)
+        );
+    } catch (e) {
+      console.error("Error invalidating/warming stats cache:", e);
+    }
     // fetch updated quote including relations to return to client
     const updatedQuote = await prisma.quoteRequest.findUnique({
       where: { id },

@@ -109,6 +109,28 @@ export async function POST(request: Request) {
     // Auto-link existing users with matching email domain
     const syncResult = await syncDistributorUsers(distributor.id);
 
+    // Invalidate & warm stats cache asynchronously (new distributor may affect usersByRole)
+    try {
+      const stats = await import("@/lib/stats-cache");
+      const statsRoutes = await import("@/app/api/admin/statistics/route");
+      stats.default.invalidateStatsCache();
+      stats.default
+        .maybeWarmStats(statsRoutes.computeStatistics)
+        .catch((err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error(
+            "Failed to warm stats after distributor create:",
+            msg,
+            err
+          );
+        });
+    } catch (e) {
+      console.error(
+        "Error invalidating/warming stats cache after distributor create:",
+        e
+      );
+    }
+
     return NextResponse.json(
       {
         distributor,

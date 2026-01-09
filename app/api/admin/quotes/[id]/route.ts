@@ -47,9 +47,28 @@ export async function PATCH(
     where: { id: updated.id },
     include: { product: true, requester: true }
   });
+  // Invalidate & warm stats cache (quote status change affects conversion & aging)
+  try {
+    // import lazily to avoid top-level import order issues
+    const stats = await import("@/lib/stats-cache");
+    const statsRoutes = await import("@/app/api/admin/statistics/route");
+    stats.default.invalidateStatsCache();
+    stats.default
+      .maybeWarmStats(statsRoutes.computeStatistics)
+      .catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error("Failed to warm stats after quote patch:", msg, err);
+      });
+  } catch (e) {
+    console.error(
+      "Error invalidating/warming stats cache after quote patch:",
+      e
+    );
+  }
   return NextResponse.json(updatedWithRelations);
 }
 import { NextRequest, NextResponse } from "next/server";
+// Note: stats cache is warmed lazily from handlers to avoid load-order issues
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";

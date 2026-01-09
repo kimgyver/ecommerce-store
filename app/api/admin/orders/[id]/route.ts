@@ -119,6 +119,24 @@ export async function PATCH(
       include: { items: { include: { product: true } } }
     });
 
+    // Invalidate & warm stats cache asynchronously (order status change may affect ordersByStatus/revenue)
+    try {
+      const stats = await import("@/lib/stats-cache");
+      const statsRoutes = await import("@/app/api/admin/statistics/route");
+      stats.default.invalidateStatsCache();
+      stats.default
+        .maybeWarmStats(statsRoutes.computeStatistics)
+        .catch((err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error("Failed to warm stats after admin order update:", msg, err);
+        });
+    } catch (e) {
+      console.error(
+        "Error invalidating/warming stats cache after admin order update:",
+        e
+      );
+    }
+
     return NextResponse.json({ message: "Order status updated", order });
   } catch (error) {
     console.error("Error updating admin order:", error);

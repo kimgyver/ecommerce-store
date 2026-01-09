@@ -114,6 +114,24 @@ export async function POST(request: Request) {
       }
     });
 
+    // Invalidate & warm stats cache asynchronously (product affects totals/topProducts)
+    try {
+      const stats = await import("@/lib/stats-cache");
+      const statsRoutes = await import("@/app/api/admin/statistics/route");
+      stats.default.invalidateStatsCache();
+      stats.default
+        .maybeWarmStats(statsRoutes.computeStatistics)
+        .catch((err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error("Failed to warm stats after product create:", msg, err);
+        });
+    } catch (e) {
+      console.error(
+        "Error invalidating/warming stats cache after product create:",
+        e
+      );
+    }
+
     return NextResponse.json(product, { status: 201 });
   } catch (error) {
     console.error("Error creating product:", error);

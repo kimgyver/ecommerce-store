@@ -59,6 +59,28 @@ export async function PUT(
       }
     });
 
+    // Invalidate & warm stats cache asynchronously (distributor update may affect usersByRole)
+    try {
+      const stats = await import("@/lib/stats-cache");
+      const statsRoutes = await import("@/app/api/admin/statistics/route");
+      stats.default.invalidateStatsCache();
+      stats.default
+        .maybeWarmStats(statsRoutes.computeStatistics)
+        .catch((err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error(
+            "Failed to warm stats after distributor update:",
+            msg,
+            err
+          );
+        });
+    } catch (e) {
+      console.error(
+        "Error invalidating/warming stats cache after distributor update:",
+        e
+      );
+    }
+
     return NextResponse.json({ distributor });
   } catch (error) {
     console.error("Update distributor error:", error);
@@ -137,6 +159,28 @@ export async function DELETE(
         where: { id }
       })
     ]);
+
+    // Invalidate & warm stats cache asynchronously (distributor delete may affect usersByRole)
+    try {
+      const stats = await import("@/lib/stats-cache");
+      const statsRoutes = await import("@/app/api/admin/statistics/route");
+      stats.default.invalidateStatsCache();
+      stats.default
+        .maybeWarmStats(statsRoutes.computeStatistics)
+        .catch((err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error(
+            "Failed to warm stats after distributor delete:",
+            msg,
+            err
+          );
+        });
+    } catch (e) {
+      console.error(
+        "Error invalidating/warming stats cache after distributor delete:",
+        e
+      );
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

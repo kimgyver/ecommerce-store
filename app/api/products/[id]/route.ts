@@ -150,6 +150,24 @@ export async function PUT(
       }
     });
 
+    // Invalidate & warm stats cache asynchronously (product update affects totals/topProducts)
+    try {
+      const stats = await import("@/lib/stats-cache");
+      const statsRoutes = await import("@/app/api/admin/statistics/route");
+      stats.default.invalidateStatsCache();
+      stats.default
+        .maybeWarmStats(statsRoutes.computeStatistics)
+        .catch((err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error("Failed to warm stats after product update:", msg, err);
+        });
+    } catch (e) {
+      console.error(
+        "Error invalidating/warming stats cache after product update:",
+        e
+      );
+    }
+
     return NextResponse.json(product);
   } catch (error) {
     console.error("Error updating product:", error);
@@ -195,6 +213,24 @@ export async function DELETE(
     await prisma.product.delete({
       where: { id: productId }
     });
+
+    // Invalidate & warm stats cache asynchronously (product delete affects totals/topProducts)
+    try {
+      const stats = await import("@/lib/stats-cache");
+      const statsRoutes = await import("@/app/api/admin/statistics/route");
+      stats.default.invalidateStatsCache();
+      stats.default
+        .maybeWarmStats(statsRoutes.computeStatistics)
+        .catch((err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error("Failed to warm stats after product delete:", msg, err);
+        });
+    } catch (e) {
+      console.error(
+        "Error invalidating/warming stats cache after product delete:",
+        e
+      );
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

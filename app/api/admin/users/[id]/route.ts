@@ -71,6 +71,24 @@ export async function PATCH(
       }
     });
 
+    // Invalidate & warm stats cache asynchronously (user role changes affect usersByRole)
+    try {
+      const stats = await import("@/lib/stats-cache");
+      const statsRoutes = await import("@/app/api/admin/statistics/route");
+      stats.default.invalidateStatsCache();
+      stats.default
+        .maybeWarmStats(statsRoutes.computeStatistics)
+        .catch((err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error("Failed to warm stats after user update:", msg, err);
+        });
+    } catch (e) {
+      console.error(
+        "Error invalidating/warming stats cache after user update:",
+        e
+      );
+    }
+
     return NextResponse.json(updatedUser);
   } catch (error) {
     console.error("Error updating user:", error);
