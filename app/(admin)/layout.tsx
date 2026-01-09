@@ -124,6 +124,12 @@ export default function AdminLayout({
             label="Statistics"
             isOpen={isSidebarOpen}
           />
+          <NavLink
+            href="/admin/quotes"
+            icon={Icons.orders}
+            label="Quotes"
+            isOpen={isSidebarOpen}
+          />
         </nav>
 
         {/* User info at bottom */}

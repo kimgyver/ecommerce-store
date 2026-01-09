@@ -521,3 +521,49 @@ function generatePaymentReminderHTML(data: {
 </html>
   `;
 }
+
+// Quote request email type and function
+export interface QuoteRequestEmailData {
+  productId: string;
+  productName: string;
+  productSku?: string;
+  quantity: number;
+  location?: string;
+  poNumber?: string;
+  email: string;
+}
+
+export async function sendQuoteRequestEmail(data: QuoteRequestEmailData) {
+  try {
+    const isDevelopment = process.env.NODE_ENV === "development";
+    const toEmail = isDevelopment
+      ? process.env.ADMIN_EMAIL || data.email
+      : data.email;
+    const fromEmail =
+      process.env.EMAIL_FROM || "E-Commerce Store <onboarding@resend.dev>";
+    const subject = `[Quote Request] ${data.productName} x ${data.quantity}`;
+    const html = `
+      <h2>New Quote Request</h2>
+      <ul>
+        <li><b>Product:</b> ${data.productName}${
+      data.productSku ? ` (SKU: ${data.productSku})` : ""
+    }</li>
+        <li><b>Quantity:</b> ${data.quantity}</li>
+        ${data.location ? `<li><b>Location:</b> ${data.location}</li>` : ""}
+        ${data.poNumber ? `<li><b>PO Number:</b> ${data.poNumber}</li>` : ""}
+        <li><b>Requester Email:</b> ${data.email}</li>
+      </ul>
+      <p>This quote request was submitted quickly from the field. It is delivered by email only and not stored in the database.</p>
+    `;
+    const response = await resend.emails.send({
+      from: fromEmail,
+      to: toEmail,
+      subject,
+      html
+    });
+    return { success: true, id: response.data?.id };
+  } catch (error) {
+    console.error("[Email] Failed to send Quote request email:", error);
+    return { success: false, error };
+  }
+}

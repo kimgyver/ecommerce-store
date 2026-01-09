@@ -152,7 +152,7 @@ export async function POST(request: Request) {
       );
     } catch (err) {
       console.error("Order transaction error:", err);
-      // 트랜잭션 내에서 발생한 에러를 명확히 전달
+      // Clearly surface errors that occur inside the transaction
       return NextResponse.json(
         {
           error: err instanceof Error ? err.message : "Order transaction failed"

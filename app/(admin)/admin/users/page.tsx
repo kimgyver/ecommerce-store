@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Toast } from "@/components/toast";
 
 interface User {
   id: string;
@@ -19,7 +20,7 @@ interface User {
   };
 }
 
-// 파비콘 변경 함수
+// Function to change the favicon
 function changeFavicon(emoji: string) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
     <rect width="100" height="100" fill="white"/>
@@ -46,6 +47,10 @@ export default function UsersPage() {
     name: "",
     role: ""
   });
+  const [toast, setToast] = useState<{
+    message: string;
+    type?: "success" | "error" | "info";
+  } | null>(null);
 
   useEffect(() => {
     changeFavicon("👥");
@@ -104,11 +109,11 @@ export default function UsersPage() {
         );
         closeEditModal();
       } else {
-        alert("Failed to update user");
+        setToast({ message: "Failed to update user", type: "error" });
       }
     } catch (error) {
       console.error("Error updating user:", error);
-      alert("Failed to update user");
+      setToast({ message: "Failed to update user", type: "error" });
     }
   };
 
@@ -137,6 +142,13 @@ export default function UsersPage() {
 
   return (
     <div>
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type as "success" | "error" | "info"}
+          onClose={() => setToast(null)}
+        />
+      )}
       <h1 className="text-4xl font-bold mb-8">User Management</h1>
 
       {/* Filters */}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Toast } from "@/components/toast";
 import { downloadPOPDF } from "@/lib/pdf-generator";
 
@@ -32,7 +33,7 @@ interface Order {
   invoiceNumber?: string | null;
 }
 
-// 파비콘 변경 함수
+// Function to change the favicon
 function changeFavicon(emoji: string) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
     <rect width="100" height="100" fill="white"/>
@@ -66,9 +67,9 @@ export default function OrdersPage() {
   };
 
   useEffect(() => {
-    // 타이틀 변경
+    // Update page title
 
-    // 파비콘 변경
+    // Change favicon
     changeFavicon("⚙️");
 
     fetchOrders();
@@ -230,9 +231,12 @@ export default function OrdersPage() {
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <p className="text-sm text-gray-600">Order ID</p>
-                  <p className="text-lg font-mono font-bold text-gray-900">
+                  <Link
+                    href={`/admin/orders/${order.id}`}
+                    className="text-lg font-mono font-bold text-gray-900 hover:underline"
+                  >
                     {order.id}
-                  </p>
+                  </Link>
                   {order.poNumber && (
                     <div className="mt-1">
                       <p className="text-xs text-gray-500">PO Number</p>
@@ -287,6 +291,12 @@ export default function OrdersPage() {
 
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-3">
+                  <Link
+                    href={`/admin/orders/${order.id}`}
+                    className="px-3 py-1.5 border rounded text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    View
+                  </Link>
                   <p className="text-sm text-gray-600">
                     {new Date(order.createdAt).toLocaleDateString()}
                   </p>

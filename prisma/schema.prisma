@@ -45,6 +45,8 @@ model User {
   alwaysUseProfileShipping Boolean @default(false)
   
   @@index([distributorId])
+    quoteRequests         QuoteRequest[]        @relation("RequesterQuoteRequests")
+    assignedQuoteRequests QuoteRequest[]        @relation("QuoteAssignee")
 }
 
 // Distributor company model
@@ -61,6 +63,7 @@ model Distributor {
   users           User[]   // Employees of this distributor
   distributorPrices DistributorPrice[] // Custom pricing for this distributor
   categoryDiscounts CategoryDiscount[] // Category-level discounts
+    quoteRequests      QuoteRequest[]
 }
 
 model Product {
@@ -82,6 +85,7 @@ model Product {
   wishlist      Wishlist[]
   reviews       Review[]
   distributorPrices DistributorPrice[]
+    quoteRequests      QuoteRequest[]
 }
 
 model Order {
@@ -118,6 +122,7 @@ model Order {
   @@index([userId])
   @@index([poNumber])
   @@index([status])
+    quoteRequests      QuoteRequest[]
 }
 
 model OrderItem {
@@ -228,4 +233,34 @@ model CategoryDiscount {
   
   @@unique([distributorId, category])
   @@index([distributorId])
+}
+
+// B2B Quote Request model
+model QuoteRequest {
+  id            String    @id @default(cuid())
+  requesterId   String
+    requester     User      @relation("RequesterQuoteRequests", fields: [requesterId], references: [id], onDelete: Cascade)
+  productId     String
+  product       Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  distributorId String?
+  distributor   Distributor? @relation(fields: [distributorId], references: [id], onDelete: SetNull)
+  status        String    @default("requested") // requested, quoted, ordered, cancelled
+  quantity      Int       @default(1) // Quote request quantity
+  price         Float?
+  assigneeId    String?
+    assignee      User?     @relation("QuoteAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  notes         String?
+  history       Json?     // Array of status change events: [{status, changedBy, timestamp, note}]
+  quoteFileUrl  String?   // URL to uploaded quote PDF
+  quoteSentAt   DateTime?
+  orderId       String?
+  order         Order?    @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([requesterId])
+  @@index([productId])
+  @@index([distributorId])
+  @@index([status])
+  @@index([assigneeId])
 }

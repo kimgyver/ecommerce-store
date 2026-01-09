@@ -124,10 +124,18 @@ const sampleUsers = [
 async function main() {
   console.log("🌱 Seeding database...");
 
-  // Delete existing data
+  // Delete all data in correct order to avoid foreign key constraint errors
+  await prisma.orderItem.deleteMany();
+  await prisma.order.deleteMany();
+  await prisma.review.deleteMany();
+  await prisma.wishlist.deleteMany();
+  await prisma.cartItem.deleteMany();
+  await prisma.cart.deleteMany();
+  await prisma.quoteRequest.deleteMany();
   await prisma.product.deleteMany();
   await prisma.distributor.deleteMany();
-  console.log("✓ Cleared existing products and distributors");
+  await prisma.user.deleteMany();
+  console.log("✓ Cleared all tables");
 
   // Create sample distributors
   console.log("Creating distributors...");
@@ -141,6 +149,7 @@ async function main() {
       `✓ Created distributor: ${distributor.name} (${distributor.emailDomain})`
     );
   }
+  console.log(`Total distributors created: ${createdDistributors.length}`);
 
   // Create sample users
   console.log("Creating users...");
@@ -177,6 +186,7 @@ async function main() {
       })`
     );
   }
+  console.log(`Total users created: ${createdUsers.length}`);
 
   // Add sample products
   const createdProducts = [];
@@ -192,6 +202,7 @@ async function main() {
     });
     console.log(`✓ Created product: ${created.name}`);
   }
+  console.log(`Total products created: ${createdProducts.length}`);
 
   // Create sample reviews
   console.log("Creating sample reviews...");

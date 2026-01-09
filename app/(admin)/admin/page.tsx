@@ -17,7 +17,7 @@ interface DashboardStats {
   newUsersThisMonth: number;
 }
 
-// 파비콘 변경 함수
+// Function to change the favicon
 function changeFavicon(emoji: string) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
     <rect width="100" height="100" fill="white"/>

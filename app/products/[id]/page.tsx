@@ -3,16 +3,23 @@
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useCart } from "@/lib/cart-context";
-import { notFound, useParams } from "next/navigation";
-import type { Product } from "@/lib/products";
+import type { Product as BaseProduct } from "@/lib/products";
+import QuoteRequestForm from "@/components/QuoteRequestForm";
+import { useSession } from "next-auth/react";
 import ReviewForm from "@/components/ReviewForm";
 import ReviewsList from "@/components/ReviewsList";
 import { StarRating } from "@/components/star-rating";
+import { useParams } from "next/navigation";
+import Link from "next/link";
 
 interface DiscountTier {
   minQty: number;
   maxQty: number | null;
   price: number;
+}
+
+interface Product extends BaseProduct {
+  sku?: string;
 }
 
 interface ProductWithTiers extends Product {
@@ -23,8 +30,15 @@ interface ProductWithTiers extends Product {
 }
 
 export default function ProductDetailPage() {
+  const { data: session } = useSession();
+  console.log("[ProductDetailPage] session:", session);
   const params = useParams();
-  const id = params.id as string;
+  const id =
+    typeof params.id === "string"
+      ? params.id
+      : Array.isArray(params.id)
+      ? params.id[0]
+      : "";
   const [product, setProduct] = useState<ProductWithTiers | null>(null);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [quantity, setQuantity] = useState(1);
@@ -40,7 +54,8 @@ export default function ProductDetailPage() {
         // Use API endpoint to get role-based pricing
         const response = await fetch(`/api/products/${id}`);
         if (!response.ok) {
-          notFound();
+          setProduct(null);
+          return;
         }
         const productData = await response.json();
         setProduct(productData);
@@ -61,7 +76,7 @@ export default function ProductDetailPage() {
         }
       } catch (error) {
         console.error("Failed to load product:", error);
-        notFound();
+        setProduct(null);
       } finally {
         setIsLoading(false);
       }
@@ -129,7 +144,18 @@ export default function ProductDetailPage() {
   }
 
   if (!product) {
-    notFound();
+    // Not found fallback for client component
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-16 text-center">
+        <h2 className="text-2xl font-bold mb-4">Product Not Found</h2>
+        <p className="text-gray-600 mb-8">
+          The product you are looking for does not exist or could not be loaded.
+        </p>
+        <Link href="/products" className="text-blue-600 hover:underline">
+          Back to Products
+        </Link>
+      </div>
+    );
   }
 
   // Calculate available stock considering cart items
@@ -165,21 +191,23 @@ export default function ProductDetailPage() {
           className="relative bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center p-4"
           style={{ aspectRatio: "1 / 1" }}
         >
-          <Image
-            src={product.image}
-            alt={product.name}
-            fill
-            className="object-contain"
-          />
+          {product && (
+            <Image
+              src={product.image}
+              alt={product.name}
+              fill
+              className="object-contain"
+            />
+          )}
         </div>
 
         {/* Product info */}
         <div>
-          <p className="text-gray-500 text-sm">{product.category}</p>
-          <h1 className="text-4xl font-bold mt-2">{product.name}</h1>
+          <p className="text-gray-500 text-sm">{product?.category}</p>
+          <h1 className="text-4xl font-bold mt-2">{product?.name}</h1>
 
           {/* Rating */}
-          {product.rating && (
+          {product?.rating && (
             <div className="mt-3">
               <StarRating
                 rating={product.rating}
@@ -189,30 +217,30 @@ export default function ProductDetailPage() {
             </div>
           )}
 
-          <p className="text-gray-600 mt-4">{product.description}</p>
+          <p className="text-gray-600 mt-4">{product?.description}</p>
 
           <div className="mt-8 border-t border-b py-8">
             <p className="text-gray-600">Price</p>
-            {product.basePrice && product.basePrice !== product.price ? (
+            {product?.basePrice && product?.basePrice !== product?.price ? (
               <div className="mt-2">
                 <p className="text-2xl text-gray-500 line-through">
-                  ${product.basePrice.toFixed(2)}
+                  ${product?.basePrice?.toFixed(2)}
                 </p>
                 <p className="text-4xl font-bold text-blue-600 mt-1">
-                  ${product.price.toFixed(2)}
+                  ${product?.price?.toFixed(2)}
                 </p>
               </div>
             ) : (
               <p className="text-4xl font-bold text-blue-600 mt-2">
-                ${product.price.toFixed(2)}
+                ${product?.price?.toFixed(2)}
               </p>
             )}
           </div>
 
           {/* Tiered Pricing Table */}
-          {product.discountTiers &&
-            product.discountTiers.tiers &&
-            product.discountTiers.tiers.length > 0 && (
+          {product?.discountTiers &&
+            product?.discountTiers.tiers &&
+            product?.discountTiers.tiers.length > 0 && (
               <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <svg
@@ -359,6 +387,26 @@ export default function ProductDetailPage() {
           </button>
         </div>
       </div>
+
+      {/* Quote Request Form (Business Quote Request, visible to all) */}
+      {product && (
+        <div className="mt-12 border-t pt-8">
+          <details className="max-w-lg mx-auto">
+            <summary className="cursor-pointer text-blue-700 font-semibold text-base mb-2">
+              Business Quote Request
+            </summary>
+            <div className="mt-4">
+              <QuoteRequestForm
+                productId={product.id}
+                productSku={product.sku}
+                productName={product.name}
+                defaultQuantity={quantity}
+                small
+              />
+            </div>
+          </details>
+        </div>
+      )}
 
       {/* Related products */}
       {relatedProducts && relatedProducts.length > 0 && (

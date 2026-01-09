@@ -29,6 +29,86 @@ A modern, full-stack e-commerce platform built with Next.js 16, React 19, and Po
 - **Automated Payment Reminder Emails**: Scheduled emails are sent 7 days before, 1 day before, on the due date, and 1/7 days overdue (using Vercel Cron).
 - **Overdue Notification System**: Overdue reminders use different templates/messages and prevent duplicate sends.
 
+### Quotes & Quote Requests (B2B)
+
+This project includes a lightweight quote request flow for B2B customers and a sales/field rep quick-email flow. The system stores quote requests in the database and allows admins to upload a PDF quote and convert a quote into an order (PO workflow).
+
+- **Key capabilities**:
+  - Frontend: customers or reps can submit a quote request from a product page (includes quantity, location, PO# and notes).
+  - Server: `/api/quote-request` stores the request in `QuoteRequest` table (includes `quantity`, `notes`, `history`) and sends an email notification via the configured email provider.
+  - Admin: Admin UI can view a quote (`/admin/quotes/[id]`), upload a PDF (`/api/admin/quotes/[id]/upload`), change status via PATCH (`/api/admin/quotes/[id]`), and convert the quote to an order (`POST /api/admin/quotes/[id]/convert`).
+  - Conversion: Converting a quote creates an `Order` and `OrderItem` with the quoted quantity and price; the `QuoteRequest` is updated with `orderId` and `status: "ordered"`.
+
+#### Sales Rep / Field Quote (example)
+
+Scenario: Sales rep creates a quote for a B2B customer (example email to Pizazz):
+
+```
+From: john@chromet.com
+Subject: Quote Request from Chromet
+PO#: 2025-001
+Location: New York
+Products:
+- SKU-ABC-123 x 10 @ $80
+- SKU-XYZ-456 x 5 @ $150
+Total: $1,450
+```
+
+The UI calls `POST /api/quote-request` with a JSON payload. Example payload:
+
+```json
+{
+  "productId": "prod456",
+  "productName": "Keyboard",
+  "productSku": "SKU-ABC-123",
+  "quantity": 100,
+  "location": "New York",
+  "poNumber": "2025-001",
+  "email": "john@chromet.com"
+}
+```
+
+Expected response on success:
+
+```json
+{ "success": true, "id": "cmk4ycx7n0004xetecfs38ksb" }
+```
+
+Notes:
+
+- The server will **store** the request in `QuoteRequest` and also send an email using the configured email provider. The `notes` field is built from `location`, `poNumber`, and the provided `email` so anonymous submissions preserve those values.
+- In development, `ADMIN_EMAIL` (if set) may be used as the email recipient for testing.
+
+#### Admin flow / converting a quote to an order
+
+1. Admin views the quote at `/admin/quotes/[id]` (Quote details include product, requester, quantity, history, and `quoteFileUrl`).
+2. Admin can update status with `PATCH /api/admin/quotes/[id]` (body: `{ status: "quoted" }`, optional `note` and `price`).
+3. Upload a PDF via `POST /api/admin/quotes/[id]/upload` (multipart form-data - `file` field). The server stores PDF under `/public/uploads/quotes/` and sets `quoteFileUrl` in DB.
+4. To convert the quote to an order, admin triggers `POST /api/admin/quotes/[id]/convert` which:
+   - creates an `Order` and `OrderItem` using the quote `price` and `quantity`,
+   - sets `order.status` to `pending_payment` and `paymentMethod` to `po` if appropriate,
+   - updates `QuoteRequest` with `orderId` and `status: "ordered"`, and
+   - returns `{ quote: updatedQuote, order }` including relations for immediate UI refresh.
+
+Important behavior notes:
+
+- If a quote already has an `orderId`, converting again will delete the existing order and create a new one (this allows re-convert/replace behavior in admin UI).
+- The conversion calculates `totalPrice = priceEach * quantity` (ensure `price` is set on the quote before converting; admin UI supports setting a price in the quote edit flow).
+
+#### QA / Manual Test Checklist (example B2B scenario)
+
+1. Submit quote (frontend) for `Keyboard` quantity 100 with `notes: "bulk order for office"` → Verify `QuoteRequest` created in DB with the correct `quantity`, `notes`, and `status: "requested"`.
+2. Admin opens `/admin/quotes/[id]` → change status to `quoted` (PATCH) and verify `history` updated.
+3. Upload PDF via admin upload endpoint → verify `quoteFileUrl` is stored and file exists under `/public/uploads/quotes/`.
+4. Click **Convert to Order** → verify `Order` is created, `OrderItem.quantity` equals 100, `Order.totalPrice` equals `priceEach * 100` (including any applied discounts if used), and `QuoteRequest.orderId` is set and `status` is `ordered`.
+5. Verify admin UI shows a banner or link to the newly-created order and that toast notifications appear instead of blocking alerts.
+
+#### Developer notes
+
+- Migration: A Prisma migration was added to include `quantity Int @default(1)` on `QuoteRequest`. Run `npx prisma migrate dev` when pulling these changes.
+- PDF generation: quote PDFs include a timestamp line like `PDF generated at: <formatted time>` to help trace documents.
+- UX: Admin toasts (`components/toast.tsx`) are used for non-blocking notifications and major actions avoid `alert(...)` where possible.
+
 ```mermaid
 sequenceDiagram
    participant User

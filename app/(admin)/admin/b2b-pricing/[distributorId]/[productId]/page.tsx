@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Toast } from "@/components/toast";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -52,6 +53,10 @@ export default function EditB2BPricingPage({
   const [discountTiers, setDiscountTiers] = useState<DiscountTier[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [toast, setToast] = useState<{
+    message: string;
+    type?: "success" | "error" | "info";
+  } | null>(null);
 
   useEffect(() => {
     params.then(p => setResolvedParams(p));
@@ -89,7 +94,7 @@ export default function EditB2BPricingPage({
       }
     } catch (error) {
       console.error("Failed to load pricing:", error);
-      alert("Failed to load pricing data");
+      setToast({ message: "Failed to load pricing data", type: "error" });
     } finally {
       setIsLoading(false);
     }
@@ -114,17 +119,20 @@ export default function EditB2BPricingPage({
       );
 
       if (response.ok) {
-        alert("Pricing updated successfully!");
+        setToast({ message: "Pricing updated successfully!", type: "success" });
         router.push(
           `/admin/b2b-pricing?distributor=${resolvedParams.distributorId}`
         );
       } else {
         const error = await response.json();
-        alert(`Failed to update: ${error.error}`);
+        setToast({
+          message: `Failed to update: ${error.error}`,
+          type: "error"
+        });
       }
     } catch (error) {
       console.error("Save error:", error);
-      alert("Failed to save pricing");
+      setToast({ message: "Failed to save pricing", type: "error" });
     } finally {
       setIsSaving(false);
     }
@@ -142,16 +150,16 @@ export default function EditB2BPricingPage({
       );
 
       if (response.ok) {
-        alert("Pricing deleted successfully!");
+        setToast({ message: "Pricing deleted successfully!", type: "success" });
         router.push(
           `/admin/b2b-pricing?distributor=${resolvedParams.distributorId}`
         );
       } else {
-        alert("Failed to delete pricing");
+        setToast({ message: "Failed to delete pricing", type: "error" });
       }
     } catch (error) {
       console.error("Delete error:", error);
-      alert("Failed to delete pricing");
+      setToast({ message: "Failed to delete pricing", type: "error" });
     }
   };
 
@@ -214,6 +222,13 @@ export default function EditB2BPricingPage({
 
   return (
     <div className="max-w-4xl">
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type as "success" | "error" | "info"}
+          onClose={() => setToast(null)}
+        />
+      )}
       <div className="mb-6">
         <Link
           href={`/admin/b2b-pricing?distributor=${resolvedParams?.distributorId}`}
