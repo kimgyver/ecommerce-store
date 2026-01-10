@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20, 18]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js and pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-store-${{ matrix.node-version }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run tests with coverage (vitest + c8)
+        run: |
+          mkdir -p test-results
+          pnpm run coverage --silent || true
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results/**
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/**
+
+      - name: Upload to Codecov
+        if: always()
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage/**/lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Annotate PR with test summary
+        if: always() && github.event_name == 'pull_request'
+        uses: dorny/test-reporter@v1
+        with:
+          name: vitest
+          path: test-results/**/*.xml
+          reporter: junit

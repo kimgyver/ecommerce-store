@@ -399,6 +399,40 @@ npm run dev
    - Click "Products" in the navigation
    - Browse all products or filter by category
 
+   ## Testing & Coverage ✅
+
+   Run the test suite locally:
+
+   ```bash
+   pnpm test -- --run
+   ```
+
+   Generate coverage (LCOV + text summary) locally with the c8 wrapper:
+
+   ```bash
+   pnpm run coverage
+   # coverage/lcov.info will be created
+   ```
+
+   CI notes:
+
+   - The GitHub Actions workflow runs `pnpm run coverage` and uploads `coverage/**` as an artifact.
+   - We also upload coverage/lcov.info to Codecov using `codecov/codecov-action`. To allow Codecov uploads from CI you must add the repository secret `CODECOV_TOKEN` (see steps below).
+
+   How to add `CODECOV_TOKEN` (GitHub repository secret):
+
+   1. Go to the repository on GitHub -> **Settings** → **Secrets and variables** → **Actions** → **New repository secret**.
+   2. Set **Name** to `CODECOV_TOKEN` and **Value** to the token you get from Codecov (or your organization-wide Codecov token).
+   3. Click **Add secret**. CI will now be able to upload coverage reports.
+
+   Recommended PR checklist:
+
+   - Run `pnpm test` locally and ensure all tests pass.
+   - Run `pnpm run coverage` and inspect `coverage/lcov.info` and the printed summary.
+   - Open a PR and verify the CI artifacts and Codecov upload complete successfully.
+
+   If you need a Codecov token for this repository, sign in at https://app.codecov.io and follow the repository setup instructions to generate a token.
+
 3. **User Registration**
 
    - Click "Register" in the top navigation

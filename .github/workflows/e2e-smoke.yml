@@ -1,0 +1,61 @@
+name: E2E Smoke Tests
+
+on:
+  pull_request:
+    branches: [master]
+  workflow_dispatch: {}
+
+jobs:
+  e2e-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@latest --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Add hosts entry for demo subdomain
+        run: echo "127.0.0.1 chromet.localhost" | sudo tee -a /etc/hosts
+
+      - name: Generate Prisma client
+        run: pnpm prisma:generate
+
+      - name: Seed database
+        run: pnpm prisma:seed
+
+      - name: Build
+        run: pnpm build
+
+      - name: Start server
+        run: pnpm start &
+
+      - name: Wait for server
+        uses: jakejarvis/wait-action@v0.1.2
+        with:
+          url: "http://127.0.0.1:3000"
+          timeout: "60s"
+
+      - name: Run Playwright E2E smoke tests
+        run: pnpm test:e2e
+
+      - name: Upload Playwright HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report

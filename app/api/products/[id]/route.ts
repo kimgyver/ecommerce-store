@@ -4,7 +4,8 @@ import { writeFile, mkdir, unlink } from "fs/promises";
 import { join } from "path";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getProductPrice } from "@/lib/pricing";
+import { getProductPrice, getProductPriceForDistributor } from "@/lib/pricing";
+import { getTenantForHost } from "@/lib/tenant";
 
 const uploadDir = join(process.cwd(), "public", "uploads", "products");
 
@@ -18,6 +19,11 @@ export async function GET(
 
     const session = await getServerSession(authOptions);
     const userId = session?.user?.id || null;
+
+    // If no user session, try to detect tenant via middleware header (for subdomain POC)
+    const tenantHost =
+      request.headers.get("x-tenant-host") || request.headers.get("host") || "";
+    const tenant = await getTenantForHost(tenantHost);
 
     const product = await prisma.product.findUnique({
       where: { id: productId },
@@ -37,9 +43,40 @@ export async function GET(
     }
 
     // Apply role-based pricing
-    const effectivePrice = await getProductPrice(productId, userId, 1);
+    let effectivePrice: number;
+    // If the logged-in user is a distributor, use their pricing
+    if (userId) {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { role: true, distributorId: true }
+      });
 
-    // Get discount tiers if user is a distributor
+      if (user?.role === "distributor" && user.distributorId) {
+        effectivePrice = await getProductPrice(productId, userId, 1);
+      } else if (tenant) {
+        // For customers on a tenant (subdomain) storefront, apply tenant pricing
+        effectivePrice = await getProductPriceForDistributor(
+          productId,
+          tenant.id,
+          1
+        );
+      } else {
+        effectivePrice = await getProductPrice(productId, userId, 1);
+      }
+    } else {
+      // No user session: if tenant is present, use tenant pricing
+      if (tenant) {
+        effectivePrice = await getProductPriceForDistributor(
+          productId,
+          tenant.id,
+          1
+        );
+      } else {
+        effectivePrice = await getProductPrice(productId, userId, 1);
+      }
+    }
+
+    // Get discount tiers if user is a distributor OR tenant distributor for POC
     let discountTiers = null;
     if (userId) {
       const user = await prisma.user.findUnique({
@@ -67,6 +104,23 @@ export async function GET(
             tiers: distributorPrice.discountTiers
           };
         }
+      }
+    }
+
+    // Also show tenant-level distributor tiers if tenant configured (applies even if a customer is logged in)
+    if (tenant) {
+      const distributorPrice = await prisma.distributorPrice.findUnique({
+        where: {
+          productId_distributorId: { productId, distributorId: tenant.id }
+        },
+        select: { customPrice: true, discountTiers: true }
+      });
+
+      if (distributorPrice) {
+        discountTiers = {
+          customPrice: distributorPrice.customPrice,
+          tiers: distributorPrice.discountTiers
+        };
       }
     }
 

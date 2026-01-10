@@ -121,7 +121,7 @@ export default function EditB2BPricingPage({
       if (response.ok) {
         setToast({ message: "Pricing updated successfully!", type: "success" });
         router.push(
-          `/admin/b2b-pricing?distributor=${resolvedParams.distributorId}`
+          `/admin/b2b-management?distributor=${resolvedParams.distributorId}&tab=pricing`
         );
       } else {
         const error = await response.json();
@@ -152,7 +152,7 @@ export default function EditB2BPricingPage({
       if (response.ok) {
         setToast({ message: "Pricing deleted successfully!", type: "success" });
         router.push(
-          `/admin/b2b-pricing?distributor=${resolvedParams.distributorId}`
+          `/admin/b2b-management?distributor=${resolvedParams.distributorId}&tab=pricing`
         );
       } else {
         setToast({ message: "Failed to delete pricing", type: "error" });
@@ -211,10 +211,10 @@ export default function EditB2BPricingPage({
           Product or distributor not found
         </p>
         <Link
-          href={`/admin/b2b-pricing?distributor=${resolvedParams?.distributorId}`}
+          href={`/admin/b2b-management?distributor=${resolvedParams?.distributorId}&tab=pricing`}
           className="text-blue-600 hover:underline"
         >
-          ← Back to B2B Pricing
+          ← Back to B2B Management
         </Link>
       </div>
     );
@@ -231,10 +231,10 @@ export default function EditB2BPricingPage({
       )}
       <div className="mb-6">
         <Link
-          href={`/admin/b2b-pricing?distributor=${resolvedParams?.distributorId}`}
+          href={`/admin/b2b-management?distributor=${resolvedParams?.distributorId}&tab=pricing`}
           className="text-blue-600 hover:text-blue-700 text-sm font-medium"
         >
-          ← Back to B2B Pricing
+          ← Back to B2B Management
         </Link>
       </div>
 
@@ -411,7 +411,7 @@ export default function EditB2BPricingPage({
           </div>
           <div className="flex gap-3">
             <Link
-              href={`/admin/b2b-pricing?distributor=${resolvedParams?.distributorId}`}
+              href={`/admin/b2b-management?distributor=${resolvedParams?.distributorId}&tab=pricing`}
               className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition font-medium"
             >
               Cancel

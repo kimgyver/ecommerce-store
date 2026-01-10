@@ -2,19 +2,6 @@
   "name": "nextjs",
   "version": "0.1.0",
   "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "prisma generate && next build",
-    "start": "next start",
-    "postinstall": "prisma generate",
-    "lint": "eslint",
-    "prisma:migrate": "prisma migrate dev",
-    "prisma:studio": "prisma studio",
-    "prisma:generate": "prisma generate",
-    "prisma:seed": "node prisma/seed.ts",
-    "setup:b2b": "tsx scripts/setup-b2b-test-data.ts",
-    "create:admin": "tsx scripts/create-admin.ts"
-  },
   "dependencies": {
     "@prisma/client": "6.19.1",
     "@stripe/react-stripe-js": "^5.4.1",
@@ -31,15 +18,42 @@
     "stripe": "^20.1.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.42.0",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.0.0",
+    "@testing-library/react": "^14.0.0",
+    "@testing-library/user-event": "14.4.3",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "^4.0.16",
+    "c8": "^8.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.0",
+    "happy-dom": "^20.1.0",
+    "jsdom": "^27.4.0",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vite": "^4.3.9",
+    "vitest": "^1.6.1"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "postinstall": "prisma generate",
+    "lint": "eslint",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio",
+    "prisma:generate": "prisma generate",
+    "prisma:seed": "tsx prisma/seed.ts",
+    "setup:b2b": "tsx scripts/setup-b2b-test-data.ts",
+    "create:admin": "tsx scripts/create-admin.ts",
+    "test": "vitest",
+    "test:e2e": "playwright test",
+    "coverage": "c8 --reporter=lcov --reporter=text pnpm test -- --run --reporter=verbose"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"commonjs\"} prisma/seed.ts"

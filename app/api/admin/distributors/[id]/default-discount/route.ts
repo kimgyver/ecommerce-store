@@ -30,11 +30,12 @@ export async function PUT(
 
     const { defaultDiscountPercent } = await request.json();
 
-    // Validate discount percentage
+    // Validate discount percentage. Allow null to mean "remove default discount".
     if (
-      typeof defaultDiscountPercent !== "number" ||
-      defaultDiscountPercent < 0 ||
-      defaultDiscountPercent > 100
+      defaultDiscountPercent !== null &&
+      (typeof defaultDiscountPercent !== "number" ||
+        defaultDiscountPercent < 0 ||
+        defaultDiscountPercent > 100)
     ) {
       return NextResponse.json(
         { error: "Invalid discount percentage. Must be between 0 and 100" },

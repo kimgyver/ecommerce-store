@@ -2,7 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getProductPrice } from "@/lib/pricing";
+import { getProductPrice, getProductPriceForDistributor } from "@/lib/pricing";
+import { getTenantForHost } from "@/lib/tenant";
 
 interface CartItemWithProduct {
   id: string;
@@ -23,13 +24,17 @@ export async function GET(request: Request) {
   try {
     // Check user authentication
     const session = await getServerSession(authOptions);
-
     if (!session?.user?.id) {
       return NextResponse.json(
         { error: "Authentication required" },
         { status: 401 }
       );
     }
+
+    // Detect tenant from middleware header so cart pricing is consistent on tenant storefronts
+    const tenantHost =
+      request.headers.get("x-tenant-host") || request.headers.get("host") || "";
+    const tenant = await getTenantForHost(tenantHost);
 
     // Retrieve user cart sorted by creation time
     let cart = await prisma.cart.findUnique({
@@ -63,11 +68,34 @@ export async function GET(request: Request) {
     // Format for client with role-based pricing
     const formattedItemsPromises = cart.items.map(
       async (item: CartItemWithProduct) => {
-        const effectivePrice = await getProductPrice(
-          item.productId,
-          session.user.id,
-          item.quantity
-        );
+        // If the logged-in user is a distributor, use their pricing
+        const user = await prisma.user.findUnique({
+          where: { id: session.user.id },
+          select: { role: true, distributorId: true }
+        });
+
+        let effectivePrice: number;
+        if (user?.role === "distributor" && user.distributorId) {
+          effectivePrice = await getProductPrice(
+            item.productId,
+            session.user.id,
+            item.quantity
+          );
+        } else if (tenant) {
+          // Apply tenant (distributor) pricing when visiting a tenant subdomain
+          effectivePrice = await getProductPriceForDistributor(
+            item.productId,
+            tenant.id,
+            item.quantity
+          );
+        } else {
+          effectivePrice = await getProductPrice(
+            item.productId,
+            session.user.id,
+            item.quantity
+          );
+        }
+
         return {
           id: item.productId,
           name: item.product.name,

@@ -3,6 +3,47 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const body = await request.json();
+
+  const updateData: any = {};
+  if (typeof body.brandColor === "string")
+    updateData.brandColor = body.brandColor;
+  if (typeof body.logoUrl === "string") updateData.logoUrl = body.logoUrl;
+  if (typeof body.emailDomain === "string")
+    updateData.emailDomain = body.emailDomain;
+
+  try {
+    // Require admin
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true }
+    });
+
+    if (user?.role !== "admin") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    const updated = await prisma.distributor.update({
+      where: { id },
+      data: updateData
+    });
+    return NextResponse.json({ distributor: updated });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return new NextResponse(JSON.stringify({ error: msg }), { status: 400 });
+  }
+}
+
 // PUT /api/admin/distributors/[id] - Update distributor info
 export async function PUT(
   request: Request,

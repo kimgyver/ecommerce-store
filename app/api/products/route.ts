@@ -4,14 +4,20 @@ import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getProductPrice } from "@/lib/pricing";
+import { getProductPrice, getProductPriceForDistributor } from "@/lib/pricing";
+import { getTenantForHost } from "@/lib/tenant";
 
 const uploadDir = join(process.cwd(), "public", "uploads", "products");
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     const userId = session?.user?.id || null;
+
+    // Detect tenant from request headers (middleware sets x-tenant-host) for subdomain-based POC
+    const tenantHost =
+      request.headers.get("x-tenant-host") || request.headers.get("host") || "";
+    const tenant = await getTenantForHost(tenantHost);
 
     const products = await prisma.product.findMany({
       orderBy: {
@@ -23,15 +29,34 @@ export async function GET() {
     const productsWithPricing = await Promise.all(
       products.map(async product => {
         try {
-          const effectivePrice = await getProductPrice(
-            product.id,
-            userId,
-            1 // Default quantity for listing
-          );
+          // Priority: distributor user session pricing -> tenant (subdomain) distributor pricing -> base pricing
+          if (session?.user?.role === "distributor" && userId) {
+            const effectivePrice = await getProductPrice(product.id, userId, 1);
+            return {
+              ...product,
+              basePrice: product.price,
+              price: effectivePrice
+            };
+          }
+
+          if (tenant) {
+            // Call with (productId, distributorId)
+            const effectivePrice = await getProductPriceForDistributor(
+              product.id,
+              tenant.id
+            );
+            return {
+              ...product,
+              basePrice: product.price,
+              price: effectivePrice
+            };
+          }
+
+          const effectivePrice = await getProductPrice(product.id, userId, 1);
           return {
             ...product,
-            basePrice: product.price, // Original price
-            price: effectivePrice // B2B price if applicable
+            basePrice: product.price,
+            price: effectivePrice
           };
         } catch (priceError) {
           console.error(
