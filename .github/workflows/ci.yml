@@ -40,14 +40,14 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results
+          name: test-results-${{ matrix.node-version }}-${{ github.job }}-${{ github.run_id }}
           path: test-results/**
 
       - name: Upload coverage
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage
+          name: coverage-${{ matrix.node-version }}-${{ github.job }}-${{ github.run_id }}
           path: coverage/**
 
       - name: Upload to Codecov
