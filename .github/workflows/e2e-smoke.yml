@@ -24,7 +24,7 @@ jobs:
           corepack prepare pnpm@latest --activate
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: npm ci
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
@@ -33,16 +33,16 @@ jobs:
         run: echo "127.0.0.1 chromet.localhost" | sudo tee -a /etc/hosts
 
       - name: Generate Prisma client
-        run: pnpm prisma:generate
+        run: npm run prisma:generate
 
       - name: Seed database
-        run: pnpm prisma:seed
+        run: npm run prisma:seed
 
       - name: Build
-        run: pnpm build
+        run: npm run build
 
       - name: Start server
-        run: pnpm start &
+        run: npm run start &
 
       - name: Wait for server
         uses: jakejarvis/wait-action@v0.1.2
@@ -51,7 +51,7 @@ jobs:
           timeout: "60s"
 
       - name: Run Playwright E2E smoke tests
-        run: pnpm test:e2e
+        run: npm run test:e2e
 
       - name: Upload Playwright HTML report
         if: always()

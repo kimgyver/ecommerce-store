@@ -53,7 +53,7 @@
     "create:admin": "tsx scripts/create-admin.ts",
     "test": "vitest",
     "test:e2e": "playwright test",
-    "coverage": "c8 --reporter=lcov --reporter=text pnpm test -- --run --reporter=verbose"
+    "coverage": "c8 --reporter=lcov --reporter=text npm test -- --run --reporter=verbose"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"commonjs\"} prisma/seed.ts"
