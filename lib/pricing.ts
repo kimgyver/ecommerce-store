@@ -75,11 +75,15 @@ export async function getProductPrice(
 
     if (!distributorPrice) {
       // No custom product pricing, check category-level discount
-      const categoryDiscount = await prisma.categoryDiscount.findUnique({
+      // Use case-insensitive lookup for category discounts to avoid issues
+      // with capitalization mismatches between product.category and stored
+      // category discount keys.
+      const categoryDiscount = await prisma.categoryDiscount.findFirst({
         where: {
-          distributorId_category: {
-            distributorId: user.distributorId,
-            category: product.category
+          distributorId: user.distributorId,
+          category: {
+            equals: product.category,
+            mode: "insensitive" as const
           }
         }
       });
@@ -198,11 +202,15 @@ export async function getProductPriceForDistributor(
 
   if (!distributorPrice) {
     // No custom product pricing, try category discount
-    const categoryDiscount = await prisma.categoryDiscount.findUnique({
+    // Use case-insensitive lookup for category discounts to handle
+    // capitalization differences between stored discounts and product
+    // category strings.
+    const categoryDiscount = await prisma.categoryDiscount.findFirst({
       where: {
-        distributorId_category: {
-          distributorId,
-          category: product.category
+        distributorId,
+        category: {
+          equals: product.category,
+          mode: "insensitive" as const
         }
       }
     });

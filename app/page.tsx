@@ -13,7 +13,9 @@ export default function Home() {
   useEffect(() => {
     const loadProducts = async () => {
       try {
-        const response = await fetch("/api/products");
+        const response = await fetch("/api/products", {
+          headers: { "x-tenant-host": window.location.host }
+        });
         if (response.ok) {
           const products = await response.json();
           // Get first 3 products as featured

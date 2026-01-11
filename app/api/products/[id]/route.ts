@@ -17,6 +17,13 @@ export async function GET(
     const resolvedParams = await Promise.resolve(params);
     const productId = resolvedParams.id;
 
+    // Debugging: log incoming tenant host in development to help diagnose tenant detection
+    const incomingTenantHost =
+      request.headers.get("x-tenant-host") || request.headers.get("host");
+    if (process.env.NODE_ENV !== "production") {
+      console.debug("[Product API] incoming tenant host:", incomingTenantHost);
+    }
+
     const session = await getServerSession(authOptions);
     const userId = session?.user?.id || null;
 

@@ -19,6 +19,16 @@ export async function GET(request: Request) {
       request.headers.get("x-tenant-host") || request.headers.get("host") || "";
     const tenant = await getTenantForHost(tenantHost);
 
+    // Debugging aid: log tenant detection when running in dev to help trace pricing issues
+    if (process.env.NODE_ENV !== "production") {
+      console.debug(
+        "Products API tenantHost:",
+        tenantHost,
+        "resolvedTenant:",
+        tenant ? { id: tenant.id, name: tenant.name } : null
+      );
+    }
+
     const products = await prisma.product.findMany({
       orderBy: {
         createdAt: "desc"

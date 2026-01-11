@@ -52,7 +52,10 @@ export default function ProductDetailPage() {
     const loadProduct = async () => {
       try {
         // Use API endpoint to get role-based pricing
-        const response = await fetch(`/api/products/${id}`);
+        // Include current host so tenant (white-label) can be detected
+        const response = await fetch(`/api/products/${id}`, {
+          headers: { "x-tenant-host": window.location.host }
+        });
         if (!response.ok) {
           setProduct(null);
           return;
@@ -62,7 +65,9 @@ export default function ProductDetailPage() {
 
         // Load related products from same category
         if (productData.category) {
-          const allProductsResponse = await fetch("/api/products");
+          const allProductsResponse = await fetch("/api/products", {
+            headers: { "x-tenant-host": window.location.host }
+          });
           if (allProductsResponse.ok) {
             const allProducts = await allProductsResponse.json();
             const related = allProducts

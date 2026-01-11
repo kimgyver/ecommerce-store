@@ -27,7 +27,9 @@ export function QuickViewModal({ productId, onClose }: QuickViewModalProps) {
     const loadProduct = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch(`/api/products/${productId}`);
+        const response = await fetch(`/api/products/${productId}`, {
+          headers: { "x-tenant-host": window.location.host }
+        });
         if (response.ok) {
           const data = await response.json();
           setProduct(data);

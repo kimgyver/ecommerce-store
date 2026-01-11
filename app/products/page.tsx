@@ -105,7 +105,10 @@ function ProductsContent() {
     const loadProducts = async () => {
       try {
         // Use API endpoint to get role-based pricing
-        const response = await fetch("/api/products");
+        // Include current host as x-tenant-host so the API can detect tenant (subdomain/white-label)
+        const response = await fetch("/api/products", {
+          headers: { "x-tenant-host": window.location.host }
+        });
         console.log("Products API response:", response.status);
         if (response.ok) {
           const allProducts = await response.json();

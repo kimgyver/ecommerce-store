@@ -33,7 +33,7 @@
 - 과정(간략):
   1. 요청 호스트에서 정확히 매칭되는 `DistributorDomain`(verified 우선)을 찾음 → 해당 `distributor` 사용
   2. 호스트가 `emailDomain` 또는 회사 키워드와 매칭되는 `Distributor`가 있으면 사용
-  2.5. 도메인/서브도메인 매핑 예: `chromet.com` 또는 `chromet.pizazz.com` → Host 헤더로 테넌트 조회 → 해당 디스트리뷰터 컨텍스트로 동작
+     2.5. 도메인/서브도메인 매핑 예: `chromet.com` 또는 `chromet.ecommerce-store.com` → Host 헤더로 테넌트 조회 → 해당 디스트리뷰터 컨텍스트로 동작
   3. 없으면 기본(플랫폼) 동작
 
 참고 파일: `lib/tenant.ts` (호스트 기반 매핑), `components/TenantServerProvider.tsx` (headers()를 통해 서버에서 테넌트 주입)
