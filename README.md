@@ -117,16 +117,16 @@ sequenceDiagram
    participant Email
    participant PDF
 
-   User->>Store: 상품 선택, 체크아웃
-   Store->>User: 결제 방식 선택 (Stripe/PO)
-   User->>Store: PO 선택, 주문 생성
-   Store->>PDF: PO PDF 생성
-   Store->>Email: PO 주문 확인 이메일+PDF 발송
-   Admin->>Store: 주문 승인(Approve Order)
-   Store->>User: 출고/배송 진행
-   Admin->>Store: 입금 확인(Mark as Paid)
-   Store->>User: 결제 완료 알림
-   Store->>Email: 자동 결제/연체 알림 (스케줄)
+   User->>Store: Selects product, proceeds to checkout
+   Store->>User: Choose payment method (Stripe/PO)
+   User->>Store: Selects PO, creates order
+   Store->>PDF: Generate PO PDF
+   Store->>Email: Send PO confirmation email + PDF
+   Admin->>Store: Approve Order
+   Store->>User: Fulfillment / Shipping in progress
+   Admin->>Store: Mark as Paid
+   Store->>User: Payment completed notification
+   Store->>Email: Automated payment and overdue reminders (scheduled)
 ```
 
 ### Core E-Commerce Features

@@ -106,7 +106,49 @@ API 엔드포인트 (관리자용)
 - Pricing: distributor custom price 적용 확인, 카테고리 할인 우선순위 확인
 - Tenant resolution: 요청 Host로 접속 시 올바른 브랜드(색/로고)가 적용되는지 수동/자동 테스트
 
+## 🔗 데모 페이지
+
+- **로컬 데모:** `http://chromet.localhost:3000/tenant-demo` — 방문하면 `Chromet` 테넌트의 데모 페이지(브랜딩 및 가격 적용 예시)를 확인할 수 있습니다.
+
 ---
+
+## 🧾 운영 가이드 (DNS / SSL / 라우팅)
+
+- **DNS 레코드 예시:** A 레코드 또는 CNAME을 사용합니다. 예: `A  123.123.123.123` 또는 `CNAME  app.yourplatform.com`.
+- **권장 TTL / 재시도:** 검증 시 TTL로 인해 지연이 생길 수 있으므로 재시도(backoff) 로직을 두고 최대 10분 내 반복 검사 권장.
+- **SSL/프록시:** 프로덕션에서는 TLS를 프록시(예: Vercel, Cloudflare, Nginx)에서 종료하고 플랫폼으로 리버스 프록시하세요. 서브도메인 기반 라우팅을 권장합니다.
+
+## 🔒 보안·운영 권장 사항
+
+- **검증된 도메인만 허용:** `DistributorDomain.status === 'verified'` 인 경우에만 도메인을 테넌트 매핑에 사용하세요(도메인 테이크오버 방지).
+- **권한 제어:** 도메인 추가/검증/삭제는 관리자 권한으로 제한하고, 도메인 검증 API에 rate limiting 적용.
+- **이메일 보안:** 테넌트별 송신 도메인은 SPF/DKIM/Dmarc 설정을 권장하며, 바운스/반송 처리를 마련하세요.
+
+## ⚡ 캐싱·CDN 고려사항
+
+- **캐시 키에 호스트 포함:** CDN/엣지 캐시 키에 `Host` 또는 `x-tenant-host` 를 포함해야 다른 테넌트의 페이지가 섞이지 않습니다.
+- **브랜딩/가격 변경 시 인밸리데이션:** 브랜드나 가격이 바뀌면 관련 URL/페이지의 캐시를 무효화하세요.
+
+## 🧪 테스트 & QA (로컬 재현 및 자동화)
+
+- **로컬 재현:** `/etc/hosts` 에 `127.0.0.1 chromet.localhost` 같은 항목을 추가하고 브라우저에서 `http://chromet.localhost:3000/tenant-demo`로 접속해 브랜딩과 가격 적용을 확인하세요.
+- **네트워크 확인:** DevTools Network 탭에서 `/api/products/:id` 요청의 `x-tenant-host` 헤더와 응답의 `price` 필드를 확인하세요.
+- **E2E 시나리오 제안:** Playwright 테스트로 `chromet.localhost:3000/tenant-demo` 열기 → 브랜드(로고/색상) 확인 → 특정 제품에서 할인된 `price`가 표시되는지 검증.
+
+## 🔍 문제 해결(즉시 확인 체크리스트)
+
+- 프론트에서 기본가만 보일 때: 1) 요청이 `samsung.localhost` 등 테넌트 호스트로 되어 있는지 확인, 2) `/api/products/:id` 응답의 `price` 값을 확인, 3) 서버 로그에 들어오는 `x-tenant-host` 값 확인.
+- 도메인 검증 실패 시: `DistributorDomain.details`에 저장된 DNS 레코드와 에러 메시지를 확인하세요.
+
+## 💡 개발자 팁 & 명령어 예시
+
+- API 호출 예시 (curl):
+
+```bash
+curl -s -H "x-tenant-host: chromet.localhost:3000" http://localhost:3000/api/products/<productId>
+```
+
+- 유용한 스크립트: `scripts/add-samsung-domain.ts`, `scripts/check-product-api-with-host.ts`, `scripts/list-distributors.ts` 를 참고하면 로컬 테넌트/도메인 재현에 도움이 됩니다.
 
 ## 📌 참고 문서
 
