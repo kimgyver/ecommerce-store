@@ -170,3 +170,80 @@ export async function getBulkProductPrices(
 
   return Promise.all(pricesPromises);
 }
+
+// POC helper: compute price for a distributor (tenant) without a user session
+export async function getProductPriceForDistributor(
+  productId: string,
+  distributorId: string | null,
+  quantity: number = 1
+): Promise<number> {
+  // Get product base price and category
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    select: { price: true, category: true }
+  });
+  if (!product) throw new Error("Product not found");
+
+  if (!distributorId) return product.price;
+
+  // Check for a distributor-specific product price
+  const distributorPrice = await prisma.distributorPrice.findUnique({
+    where: {
+      productId_distributorId: {
+        productId,
+        distributorId
+      }
+    }
+  });
+
+  if (!distributorPrice) {
+    // No custom product pricing, try category discount
+    const categoryDiscount = await prisma.categoryDiscount.findUnique({
+      where: {
+        distributorId_category: {
+          distributorId,
+          category: product.category
+        }
+      }
+    });
+
+    if (categoryDiscount && categoryDiscount.discountPercent > 0) {
+      return product.price * (1 - categoryDiscount.discountPercent / 100);
+    }
+
+    // Try default discount on distributor
+    const distributor = await prisma.distributor.findUnique({
+      where: { id: distributorId },
+      select: { defaultDiscountPercent: true }
+    });
+    if (
+      distributor?.defaultDiscountPercent &&
+      distributor.defaultDiscountPercent > 0
+    ) {
+      return product.price * (1 - distributor.defaultDiscountPercent / 100);
+    }
+
+    // fallback to base price
+    return product.price;
+  }
+
+  // If there are quantity tiers, find the matching tier
+  if (distributorPrice.discountTiers) {
+    const tiers = distributorPrice.discountTiers as Array<{
+      minQty: number;
+      maxQty: number | null;
+      price: number;
+    }>;
+
+    const applicableTier = tiers.find(tier => {
+      const meetsMin = quantity >= tier.minQty;
+      const meetsMax = tier.maxQty === null || quantity <= tier.maxQty;
+      return meetsMin && meetsMax;
+    });
+
+    if (applicableTier) return applicableTier.price;
+  }
+
+  // Return custom base price
+  return distributorPrice.customPrice;
+}

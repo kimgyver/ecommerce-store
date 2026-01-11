@@ -13,18 +13,18 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  name          String?
-  password      String
-  phone         String?
-  address       String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  phone     String?
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // User role: customer (B2C), distributor (B2B), admin
-  role          String    @default("customer")
-  
+  role String @default("customer")
+
   // B2B specific fields - link to Distributor company
   distributorId String?
   distributor   Distributor? @relation(fields: [distributorId], references: [id], onDelete: SetNull)
@@ -36,62 +36,63 @@ model User {
   defaultShippingAddress1   String?
   defaultShippingAddress2   String?
 
-  cart          Cart?
-  orders        Order[]
-  wishlist      Wishlist[]
-  reviews       Review[]
+  cart     Cart?
+  orders   Order[]
+  wishlist Wishlist[]
+  reviews  Review[]
 
   // Always use profile shipping address if true
-  alwaysUseProfileShipping Boolean @default(false)
-  
+  alwaysUseProfileShipping Boolean        @default(false)
+  quoteRequests            QuoteRequest[] @relation("RequesterQuoteRequests")
+  assignedQuoteRequests    QuoteRequest[] @relation("QuoteAssignee")
+
   @@index([distributorId])
-    quoteRequests         QuoteRequest[]        @relation("RequesterQuoteRequests")
-    assignedQuoteRequests QuoteRequest[]        @relation("QuoteAssignee")
 }
 
 // Distributor company model
 model Distributor {
-  id              String   @id @default(cuid())
-  name            String   // Company name (e.g., "Chromet Inc.")
-  emailDomain     String   @unique // Email domain for auto-detection (e.g., "chromet.com")
-  logoUrl         String?  // Company logo
-  brandColor      String?  // Brand color for white-label
+  id                     String   @id @default(cuid())
+  name                   String // Company name (e.g., "Chromet Inc.")
+  emailDomain            String   @unique // Email domain for auto-detection (e.g., "chromet.com")
+  logoUrl                String? // Company logo
+  brandColor             String? // Brand color for white-label
   defaultDiscountPercent Float? // Default discount % for all products (fallback)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  users           User[]   // Employees of this distributor
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  users             User[] // Employees of this distributor
   distributorPrices DistributorPrice[] // Custom pricing for this distributor
   categoryDiscounts CategoryDiscount[] // Category-level discounts
-    quoteRequests      QuoteRequest[]
+  domains           DistributorDomain[] // Configured domains for white-label tenancy
+  quoteRequests     QuoteRequest[]
 }
 
 model Product {
-  id            String    @id @default(cuid())
-  sku           String    @unique  // Business identifier (e.g., "NIKE-001")
-  name          String
-  description   String
-  price         Float     // B2C base price
-  image         String
-  category      String
-  stock         Int       @default(100)
-  rating        Float?    // Average rating (0-5)
-  reviewCount   Int?      // Number of reviews
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
-  orderItems    OrderItem[]
-  cartItems     CartItem[]
-  wishlist      Wishlist[]
-  reviews       Review[]
+  id          String   @id @default(cuid())
+  sku         String   @unique // Business identifier (e.g., "NIKE-001")
+  name        String
+  description String
+  price       Float // B2C base price
+  image       String
+  category    String
+  stock       Int      @default(100)
+  rating      Float? // Average rating (0-5)
+  reviewCount Int? // Number of reviews
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orderItems        OrderItem[]
+  cartItems         CartItem[]
+  wishlist          Wishlist[]
+  reviews           Review[]
   distributorPrices DistributorPrice[]
-    quoteRequests      QuoteRequest[]
+  quoteRequests     QuoteRequest[]
 }
 
 model Order {
-  id            String    @id @default(cuid())
-  userId        String
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Shipping address info
   recipientName      String?
@@ -100,105 +101,105 @@ model Order {
   shippingAddress1   String?
   shippingAddress2   String?
 
-  paymentIntentId String?   @unique // Prevent duplicate orders from the same payment (null for PO orders)
+  paymentIntentId String? @unique // Prevent duplicate orders from the same payment (null for PO orders)
 
   // B2B PO (Purchase Order) fields
-  poNumber        String?   @unique  // PO-2026-0001 format (auto-generated for B2B orders)
-  paymentDueDate  DateTime?          // Payment due date for Net 30/60 terms
-  paymentMethod   String    @default("stripe")  // stripe, po (purchase order)
-  invoiceNumber   String?   @unique  // INV-2026-0001 format (generated when payment confirmed)
-  
+  poNumber       String?   @unique // PO-2026-0001 format (auto-generated for B2B orders)
+  paymentDueDate DateTime? // Payment due date for Net 30/60 terms
+  paymentMethod  String    @default("stripe") // stripe, po (purchase order)
+  invoiceNumber  String?   @unique // INV-2026-0001 format (generated when payment confirmed)
+
   // Payment reminder tracking (JSON array of sent reminder types)
   // Format: ["7_days_before", "1_day_before", "due_date", "overdue_1", "overdue_7"]
   paymentRemindersSent String[] @default([])
 
-  items         OrderItem[]
-  totalPrice    Float
-  status        String    @default("pending") // pending, pending_payment, processing, shipped, delivered, cancelled, paid
+  items      OrderItem[]
+  totalPrice Float
+  status     String      @default("pending") // pending, pending_payment, processing, shipped, delivered, cancelled, paid
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  quoteRequests QuoteRequest[]
+
   @@index([userId])
   @@index([poNumber])
   @@index([status])
-    quoteRequests      QuoteRequest[]
 }
 
 model OrderItem {
-  id            String    @id @default(cuid())
-  orderId       String
-  order         Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  
-  productId     String
-  product       Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
-  
-  quantity      Int
-  price         Float     // Effective price at the time of purchase (with B2B discounts applied)
-  basePrice     Float?    // Original price before B2B discounts (null for non-discounted items)
-  
+  id      String @id @default(cuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  quantity  Int
+  price     Float // Effective price at the time of purchase (with B2B discounts applied)
+  basePrice Float? // Original price before B2B discounts (null for non-discounted items)
+
   @@index([orderId])
   @@index([productId])
 }
 
 model Wishlist {
-  id            String    @id @default(cuid())
-  userId        String
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  productId     String
-  product       Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
-  
-  createdAt     DateTime  @default(now())
-  
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
   @@unique([userId, productId])
   @@index([userId])
   @@index([productId])
 }
 
 model Review {
-  id            String    @id @default(cuid())
-  userId        String
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  productId     String
-  product       Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
-  
-  rating        Int       // 1-5
-  title         String
-  content       String
-  
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  rating  Int // 1-5
+  title   String
+  content String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([userId])
   @@index([productId])
 }
 
 model Cart {
-  id            String    @id @default(cuid())
-  userId        String    @unique
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  items         CartItem[]
-  
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  items CartItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model CartItem {
-  id            String    @id @default(cuid())
-  cartId        String
-  cart          Cart      @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  
-  productId     String
-  product       Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
-  
-  quantity      Int       @default(1)
-  
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
+  id     String @id @default(cuid())
+  cartId String
+  cart   Cart   @relation(fields: [cartId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  quantity Int @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@unique([cartId, productId])
   @@index([cartId])
   @@index([productId])
@@ -206,16 +207,16 @@ model CartItem {
 
 // B2B Distributor pricing model
 model DistributorPrice {
-  id              String      @id @default(cuid())
-  productId       String
-  product         Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
-  distributorId   String
-  distributor     Distributor @relation(fields: [distributorId], references: [id], onDelete: Cascade)
-  customPrice     Float       // Base B2B price for this distributor
-  discountTiers   Json?       // Quantity-based discount tiers: [{ minQty: 1, maxQty: 10, price: 80 }, ...]
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  
+  id            String      @id @default(cuid())
+  productId     String
+  product       Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  distributorId String
+  distributor   Distributor @relation(fields: [distributorId], references: [id], onDelete: Cascade)
+  customPrice   Float // Base B2B price for this distributor
+  discountTiers Json? // Quantity-based discount tiers: [{ minQty: 1, maxQty: 10, price: 80 }, ...]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
   @@unique([productId, distributorId])
   @@index([productId])
   @@index([distributorId])
@@ -223,40 +224,56 @@ model DistributorPrice {
 
 // B2B Category-level discount for distributors
 model CategoryDiscount {
-  id                String      @id @default(cuid())
-  distributorId     String
-  distributor       Distributor @relation(fields: [distributorId], references: [id], onDelete: Cascade)
-  category          String      // Product category (e.g., "Electronics", "Computers")
-  discountPercent   Float       // Discount percentage for this category
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
-  
+  id              String      @id @default(cuid())
+  distributorId   String
+  distributor     Distributor @relation(fields: [distributorId], references: [id], onDelete: Cascade)
+  category        String // Product category (e.g., "Electronics", "Computers")
+  discountPercent Float // Discount percentage for this category
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
   @@unique([distributorId, category])
+  @@index([distributorId])
+}
+
+// Domains configured by a Distributor (for white-label tenancy)
+model DistributorDomain {
+  id            String      @id @default(cuid())
+  distributorId String
+  distributor   Distributor @relation(fields: [distributorId], references: [id], onDelete: Cascade)
+  domain        String
+  status        String      @default("pending") // pending | verified | failed
+  lastCheckedAt DateTime?
+  details       Json?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([distributorId, domain])
   @@index([distributorId])
 }
 
 // B2B Quote Request model
 model QuoteRequest {
-  id            String    @id @default(cuid())
+  id            String       @id @default(cuid())
   requesterId   String
-    requester     User      @relation("RequesterQuoteRequests", fields: [requesterId], references: [id], onDelete: Cascade)
+  requester     User         @relation("RequesterQuoteRequests", fields: [requesterId], references: [id], onDelete: Cascade)
   productId     String
-  product       Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product       Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
   distributorId String?
   distributor   Distributor? @relation(fields: [distributorId], references: [id], onDelete: SetNull)
-  status        String    @default("requested") // requested, quoted, ordered, cancelled
-  quantity      Int       @default(1) // Quote request quantity
+  status        String       @default("requested") // requested, quoted, ordered, cancelled
+  quantity      Int          @default(1) // Quote request quantity
   price         Float?
   assigneeId    String?
-    assignee      User?     @relation("QuoteAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  assignee      User?        @relation("QuoteAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
   notes         String?
-  history       Json?     // Array of status change events: [{status, changedBy, timestamp, note}]
-  quoteFileUrl  String?   // URL to uploaded quote PDF
+  history       Json? // Array of status change events: [{status, changedBy, timestamp, note}]
+  quoteFileUrl  String? // URL to uploaded quote PDF
   quoteSentAt   DateTime?
   orderId       String?
-  order         Order?    @relation(fields: [orderId], references: [id], onDelete: SetNull)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  order         Order?       @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 
   @@index([requesterId])
   @@index([productId])
